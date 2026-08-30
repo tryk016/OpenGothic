@@ -1,19 +1,17 @@
 # Controller and quick-ring architecture
 
-This is the maintainer reference for the iOS controller implementation. User-facing
-controls remain in [`README-ios.md`](README-ios.md); device verification details are
-recorded here alongside the relevant implementation notes.
-
-The current implementation was introduced by commit `60ce08a2` and compiled,
-packaged and published successfully by GitHub Actions run `29211433774`.
+This is the maintainer reference for the iOS controller implementation.
+User-facing controls remain in the [iOS overview](README.md); device
+verification details are recorded here alongside the relevant implementation
+notes.
 
 ## Input pipeline
 
-1. `game/utils/gamepad.mm` reads `GCExtendedGamepad` on its private handler queue.
+1. `common/utils/gamepad.mm` reads `GCExtendedGamepad` on its private handler queue.
    It publishes the newest analog snapshot and queues lossless digital button edges.
 2. `Gamepad::consume()` returns one `GamepadInputFrame`: the newest state, ordered
    digital transitions, controller generation and overflow count.
-3. `game/ui/gamepadinput.cpp` selects exactly one `PadCtx` (`World`, `Dialog`,
+3. `common/ui/gamepadinput.cpp` selects exactly one `PadCtx` (`World`, `Dialog`,
    `Menu`, `Inventory` or `Loading`), applies radial filtering and routes the
    frame only to that context.
    A normal ring captures `World`; an assignment ring captures the still-open
@@ -79,7 +77,7 @@ exactly one level. Input must never fall through to the category menu underneath
 ## Combat semantics
 
 The mobile dispatcher does not synthesize the Gothic 1 or Gothic 2 keyboard presets.
-It sends internal actions declared in `game/utils/keycodec.h`:
+It sends internal actions declared in `common/utils/keycodec.h`:
 
 - `PadAttack` -> `ActForward`;
 - `PadAim` -> `ActGeneric` for bow/crossbow;
@@ -150,7 +148,7 @@ hidden and only corner D-pad Up/Down and B controls remain. A drag elsewhere sel
 release commits. A touch ring is cancelled when the app leaves `PadCtx::World`, so it
 cannot retain a synthetic item from an unloaded world.
 
-Rendering is procedural in `game/ui/quickring.cpp`: subdivided triangle sectors,
+Rendering is procedural in `common/ui/quickring.cpp`: subdivided triangle sectors,
 dark translucent fill, amber border and gold selection. Live 3D icons are collected in
 the inventory renderer and flushed after the Painter layer. The ring is painted by the
 last `TouchInput` overlay widget so assignment mode remains above `InventoryMenu`; the
@@ -167,7 +165,8 @@ is required because older builds ignore additional ZIP entries.
 
 ## Inventory category navigation
 
-The original `InventoryMenu` had no controller category command. The fork adds
+The original `InventoryMenu` had no controller category command. The iOS
+integration adds
 `InventoryMenu::moveCategory(int direction)`:
 
 - LB selects the first item of the previous category;
@@ -213,16 +212,16 @@ discrete UI/MOBSI direction latches rather than normal locomotion.
 
 ## Main implementation files
 
-- `game/utils/gamepad.h`, `game/utils/gamepad.mm` - backend state and event FIFO.
-- `game/ui/gamepadinput.h`, `game/ui/gamepadinput.cpp` - context routing and mapping.
-- `game/game/playercontrol.h`, `game/game/playercontrol.cpp` - semantic combat,
+- `common/utils/gamepad.h`, `common/utils/gamepad.mm` - backend state and event FIFO.
+- `common/ui/gamepadinput.h`, `common/ui/gamepadinput.cpp` - context routing and mapping.
+- `common/game/playercontrol.h`, `common/game/playercontrol.cpp` - semantic combat,
   temporary walk and target control.
-- `game/ui/quickring.h`, `game/ui/quickring.cpp` - contents, radial selection and draw.
-- `game/ui/touchinput.h`, `game/ui/touchinput.cpp` - virtual-pad parity.
-- `game/ui/inventorymenu.h`, `game/ui/inventorymenu.cpp` - category jumps.
-- `game/ui/padsystemgesture.h` - View/Menu press reducer with constexpr tests.
-- `game/ui/paddiagram.cpp` - localized EN/DE/PL in-game diagram.
-- `assets/controller/OpenGothic_Controller_Layout.svg` - README diagram.
+- `common/ui/quickring.h`, `common/ui/quickring.cpp` - contents, radial selection and draw.
+- `common/ui/touchinput.h`, `common/ui/touchinput.cpp` - virtual-pad parity.
+- `common/ui/inventorymenu.h`, `common/ui/inventorymenu.cpp` - category jumps.
+- `common/ui/padsystemgesture.h` - View/Menu press reducer with constexpr tests.
+- `common/ui/paddiagram.cpp` - localized controller diagram for all eight iOS UI languages.
+- `assets/controller/OpenGothic_Controller_Layout.svg` - documentation diagram.
 
 ## Device verification checklist
 
