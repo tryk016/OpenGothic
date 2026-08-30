@@ -80,7 +80,9 @@ Supported systems are:
 
    `https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json`
 
-3. Install **OpenGothic MetalFX Temporal** from the source. The sideloading
+3. Install **OpenGothic MetalFX Temporal** from the source. This is the single
+   maintained iOS performance build, with MetalFX fallbacks, 512 x 512 mobile
+   shadow maps and off-screen NPC animation optimization. The sideloading
    client signs the otherwise unsigned IPA with your Apple account.
 4. Copy the **contents** of your legally owned Gothic II: Night of the Raven
    installation into the app's `Documents` directory. `Data`, `_work` and

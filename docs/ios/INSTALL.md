@@ -1,9 +1,11 @@
 # Building and installing OpenGothic on iOS
 
-This guide covers the maintained MetalFX Temporal release, SideStore/AltStore
-sideloading and local Xcode installation. OpenGothic does not distribute the
-original Gothic II data. You must supply files from a legally owned copy of
-*Gothic II: Night of the Raven*.
+This guide covers the maintained MetalFX Temporal performance release,
+SideStore/AltStore sideloading and local Xcode installation. The release uses
+512 x 512 mobile shadow maps and skips full skeletal-pose work for distant,
+off-screen NPCs while preserving animation time and gameplay events.
+OpenGothic does not distribute the original Gothic II data. You must supply
+files from a legally owned copy of *Gothic II: Night of the Raven*.
 
 ## Install the release with SideStore or AltStore
 
@@ -119,8 +121,10 @@ and do not replace physical-device acceptance testing.
 
 ## Optional rendering profiles
 
-The default configuration keeps optional performance features disabled. They
-can be selected explicitly when testing:
+The source defaults keep optional performance features disabled so the
+conservative paths remain continuously buildable. The maintained IPA enables
+the recommended performance profile shown below. Individual options can also
+be selected explicitly when testing:
 
 | CMake option | Purpose |
 |---|---|
