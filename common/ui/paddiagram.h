@@ -7,7 +7,7 @@ class GthFont;
 enum class ScriptLang : int32_t;
 
 // Full-screen controller-layout help page: the bundled Xelu pad line-art with
-// leader lines, button glyphs and localized labels for this fork's gamepad
+// leader lines, button glyphs and localized labels for the iOS gamepad
 // mapping. The native iOS device-settings overlay shows it without replacing
 // the MENU.DAT controls page.
 namespace PadDiagram {

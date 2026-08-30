@@ -54,7 +54,7 @@ elseif(IOS)
   enable_language(OBJCXX)
   set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0)
   option(OPENGOTHIC_IOS_INCREASED_MEMORY_REQUESTED
-         "Mark SideStore test builds as requesting Increased Memory Limit" OFF)
+         "Request the iOS Increased Memory Limit entitlement" OFF)
   option(OPENGOTHIC_PERF_DIAGNOSTICS
          "Enable low-frequency performance and memory telemetry" OFF)
   option(OPENGOTHIC_NPC_ANIMATION_CULLING
@@ -81,9 +81,8 @@ elseif(IOS)
          "Use MetalFX Temporal AA upscaling with Spatial/Lanczos fallback on supported iOS devices" OFF)
   option(OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS
          "Bundle a small precompiled Metal library for the first iOS menu/video shaders" ON)
-  # App version. CI passes -DOPENGOTHIC_IOS_VERSION=1.0.<run> so the bundle's
-  # CFBundleShortVersionString matches the "version" field in apps.json —
-  # otherwise SideStore/AltStore rejects the download as a version mismatch.
+  # App version used for the generated iOS bundle metadata. Distributors can
+  # override it without changing the source tree.
   if(NOT DEFINED OPENGOTHIC_IOS_VERSION)
     set(OPENGOTHIC_IOS_VERSION "1.0")
   endif()
