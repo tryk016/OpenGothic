@@ -23,6 +23,12 @@ namespace PadGlyph {
   // Draw the glyph inside the square of side s with top-left (x,y). alpha scales opacity.
   void draw(Tempest::Painter& p, const GthFont& fnt, Btn b, int x, int y, int s, float alpha=1.f);
 
+  // Translucent outline variant for the iOS touch overlay. It deliberately
+  // bypasses bundled controller textures so the game remains visible through
+  // every control and both sticks have identical vector geometry.
+  void drawTouch(Tempest::Painter& p, const GthFont& fnt, Btn b,
+                 int x, int y, int s, float alpha=1.f);
+
   // Convenience for the hint bar: glyph of side s at (x,y) followed by `label`.
   // Returns the total advance in pixels (glyph + gap + text).
   int  drawLabelled(Tempest::Painter& p, const GthFont& fnt, Btn b,
