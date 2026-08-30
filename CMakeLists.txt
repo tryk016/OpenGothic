@@ -223,11 +223,25 @@ add_subdirectory(spacer/assets)
 include_directories("common")
 
 if(IOS AND OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS AND
-   OPENGOTHIC_IOS_STARTUP_METALLIB)
-  set_source_files_properties("${OPENGOTHIC_IOS_STARTUP_METALLIB}" PROPERTIES
+   OPENGOTHIC_IOS_STARTUP_RESOURCES)
+  set_source_files_properties(${OPENGOTHIC_IOS_STARTUP_RESOURCES} PROPERTIES
     GENERATED TRUE
     MACOSX_PACKAGE_LOCATION Resources)
-  target_sources(Gothic2Notr PRIVATE "${OPENGOTHIC_IOS_STARTUP_METALLIB}")
+  set_source_files_properties("${OPENGOTHIC_IOS_STARTUP_HEADER}" PROPERTIES
+    GENERATED TRUE
+    HEADER_FILE_ONLY TRUE)
+  get_filename_component(OPENGOTHIC_IOS_STARTUP_HEADER_DIR
+    "${OPENGOTHIC_IOS_STARTUP_HEADER}" DIRECTORY)
+  target_sources(Gothic2Notr PRIVATE
+    game/iosstartupshaders.mm
+    ${OPENGOTHIC_IOS_STARTUP_RESOURCES}
+    "${OPENGOTHIC_IOS_STARTUP_HEADER}")
+  target_include_directories(Gothic2Notr PRIVATE
+    "${OPENGOTHIC_IOS_STARTUP_HEADER_DIR}")
+  add_dependencies(Gothic2Notr ${OPENGOTHIC_IOS_STARTUP_TARGET})
+  target_compile_definitions(Gothic2Notr PRIVATE
+    OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS_AVAILABLE=1)
+  target_link_libraries(Gothic2Notr PRIVATE "-framework Metal" "-framework Foundation")
 endif()
 
 ## submodule dependencies
@@ -274,11 +288,6 @@ else()
   set(TEMPEST_BUILD_SHARED OFF CACHE INTERNAL "")
 endif()
 add_subdirectory(lib/Tempest/Engine)
-if(IOS AND OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS AND
-   OPENGOTHIC_IOS_STARTUP_METALLIB)
-  target_compile_definitions(Tempest PRIVATE
-    TEMPEST_METAL_STARTUP_LIBRARY="OpenGothicStartup.metallib")
-endif()
 include_directories(lib/Tempest/Engine/include)
 target_link_libraries(${PROJECT_NAME} Tempest)
 
