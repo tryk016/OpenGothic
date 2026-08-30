@@ -113,6 +113,8 @@ are optional and do not change the renderer used on other platforms:
 
 - three frames in flight;
 - direct rendering to a Metal drawable, with a safe copy fallback;
+- deferred skeletal-pose updates for distant, off-screen NPCs while animation
+  time and gameplay events continue to advance;
 - Metal shader-module caching;
 - precompiled libraries for the small startup shader set, with normal runtime
   compilation as the authoritative fallback;
@@ -153,6 +155,10 @@ OpenGothic creates the override after it validates the installed game data. It
 contains the iOS render profile, FPS choice and controller response settings.
 Deleting or renaming the override regenerates the current defaults on the next
 successful launch without changing `system/Gothic.ini`.
+
+New iOS profiles use two 512 x 512 shadow maps. Existing
+`ENGINE/shadowResolution` values are preserved, so users can choose a higher
+resolution explicitly without affecting desktop defaults.
 
 Common controller keys under `[GAMEPAD]` include `analogDeadZone`,
 `analogEngageZone`, `deadZone`, `releaseZone`, `crossAxisGuard`,
