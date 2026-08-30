@@ -440,57 +440,161 @@ set_target_properties(
     PUBLIC_HEADER ${HEADER}
     )
 
-# The iOS start screen only needs a tiny, capability-independent subset of the
-# game's shaders. Compile two capability-independent functions into a metallib at
-# build time so a fresh install does not have to feed their MSL source to Metal.
-# MtShader still keeps the normal SPIR-V -> MSL path as a compatibility fallback.
-# Bink deliberately stays on the runtime path: its unsized SSBO arrays depend on
-# Tempest's non-default MSL buffer-size binding and cannot use the CLI profile.
+# The iOS start screen only needs two capability-independent shaders. Generate
+# their canonical MSL with the same vendored SPIRV-Cross and options as Tempest,
+# then compile one metallib per shader and supported MSL version. Keeping each
+# library separate guarantees that every library has exactly one `main0` entry
+# point and lets Tempest validate the source/profile key independently.
+set(OPENGOTHIC_IOS_STARTUP_RESOURCES "" PARENT_SCOPE)
+set(OPENGOTHIC_IOS_STARTUP_HEADER "" PARENT_SCOPE)
+set(OPENGOTHIC_IOS_STARTUP_TARGET "" PARENT_SCOPE)
 if(IOS AND OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS)
-  find_program(OPENGOTHIC_SPIRV_CROSS_EXECUTABLE
-    NAMES spirv-cross
-    PATHS "/opt/homebrew/bin")
   find_program(OPENGOTHIC_XCRUN_EXECUTABLE NAMES xcrun)
 
-  if(OPENGOTHIC_SPIRV_CROSS_EXECUTABLE AND OPENGOTHIC_XCRUN_EXECUTABLE)
-    set(IOS_STARTUP_DIR      "${PROJECT_BINARY_DIR}/ios-startup")
-    set(IOS_STARTUP_METALLIB "${IOS_STARTUP_DIR}/OpenGothicStartup.metallib")
-    set(IOS_STARTUP_TRIANGLE "${PROJECT_BINARY_DIR}/sprv/triangle.vert.sprv")
-    set(IOS_STARTUP_DOWNSCALE "${PROJECT_BINARY_DIR}/sprv/downscale.frag.sprv")
-    if(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator")
+  set(IOS_STARTUP_HOST_CXX "")
+  set(IOS_STARTUP_METAL_AVAILABLE FALSE)
+  if(OPENGOTHIC_XCRUN_EXECUTABLE)
+    execute_process(
+      COMMAND "${OPENGOTHIC_XCRUN_EXECUTABLE}" -sdk macosx --find clang++
+      RESULT_VARIABLE IOS_STARTUP_HOST_CXX_RESULT
+      OUTPUT_VARIABLE IOS_STARTUP_HOST_CXX
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET)
+
+    string(TOLOWER "${CMAKE_OSX_SYSROOT}" IOS_STARTUP_SYSROOT_LOWER)
+    if(IOS_STARTUP_SYSROOT_LOWER MATCHES "iphonesimulator")
       set(IOS_STARTUP_METAL_SDK "iphonesimulator")
-      set(IOS_STARTUP_METAL_TARGET "air64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}-simulator")
+      set(IOS_STARTUP_METAL_TARGET
+        "air64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}-simulator")
     else()
       set(IOS_STARTUP_METAL_SDK "iphoneos")
-      set(IOS_STARTUP_METAL_TARGET "air64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}")
+      set(IOS_STARTUP_METAL_TARGET
+        "air64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}")
     endif()
 
+    execute_process(
+      COMMAND "${OPENGOTHIC_XCRUN_EXECUTABLE}" -sdk "${IOS_STARTUP_METAL_SDK}" --find metal
+      RESULT_VARIABLE IOS_STARTUP_METAL_RESULT
+      OUTPUT_QUIET ERROR_QUIET)
+    execute_process(
+      COMMAND "${OPENGOTHIC_XCRUN_EXECUTABLE}" -sdk "${IOS_STARTUP_METAL_SDK}" --find metallib
+      RESULT_VARIABLE IOS_STARTUP_METALLIB_RESULT
+      OUTPUT_QUIET ERROR_QUIET)
+    if(IOS_STARTUP_METAL_RESULT EQUAL 0 AND IOS_STARTUP_METALLIB_RESULT EQUAL 0)
+      set(IOS_STARTUP_METAL_AVAILABLE TRUE)
+    endif()
+  endif()
+
+  if(OPENGOTHIC_XCRUN_EXECUTABLE AND
+     IOS_STARTUP_HOST_CXX_RESULT EQUAL 0 AND
+     NOT IOS_STARTUP_HOST_CXX STREQUAL "" AND
+     IOS_STARTUP_METAL_AVAILABLE AND
+     NOT CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "")
+    set(IOS_STARTUP_DIR "${PROJECT_BINARY_DIR}/ios-startup")
+    set(IOS_STARTUP_TRIANGLE "${PROJECT_BINARY_DIR}/sprv/triangle.vert.sprv")
+    set(IOS_STARTUP_DOWNSCALE "${PROJECT_BINARY_DIR}/sprv/downscale.frag.sprv")
+    set(IOS_STARTUP_SPIRV_STAMP
+      "${IOS_STARTUP_DIR}/startup-spirv.stamp")
+
     add_custom_command(
-      TARGET ${PROJECT_NAME} POST_BUILD
-      BYPRODUCTS
-        "${IOS_STARTUP_METALLIB}"
-        "${IOS_STARTUP_DIR}/triangle.metal"
-        "${IOS_STARTUP_DIR}/downscale.metal"
-        "${IOS_STARTUP_DIR}/triangle.air"
-        "${IOS_STARTUP_DIR}/downscale.air"
+      OUTPUT "${IOS_STARTUP_SPIRV_STAMP}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${IOS_STARTUP_DIR}"
+      COMMAND "${CMAKE_COMMAND}" -E touch "${IOS_STARTUP_SPIRV_STAMP}"
+      DEPENDS "${IOS_STARTUP_TRIANGLE}" "${IOS_STARTUP_DOWNSCALE}"
+      COMMENT "Preparing the two iOS startup SPIR-V shaders"
+      VERBATIM)
+    add_custom_target(ios-startup-spirv DEPENDS "${IOS_STARTUP_SPIRV_STAMP}")
+    add_dependencies(shader ios-startup-spirv)
+
+    set(IOS_STARTUP_TOOL_SOURCE_DIR
+      "${CMAKE_SOURCE_DIR}/shader/ios_startup_tool")
+    set(IOS_STARTUP_TOOL_BINARY_DIR
+      "${PROJECT_BINARY_DIR}/ios-startup-tool-build")
+    set(IOS_STARTUP_TOOL_EXECUTABLE
+      "${IOS_STARTUP_TOOL_BINARY_DIR}/bin/opengothic-ios-startup-msl${CMAKE_EXECUTABLE_SUFFIX}")
+    set(IOS_STARTUP_TOOL_STAMP
+      "${IOS_STARTUP_TOOL_BINARY_DIR}/opengothic-ios-startup-msl.stamp")
+    set(IOS_STARTUP_SPIRV_CROSS_DIR
+      "${CMAKE_SOURCE_DIR}/lib/Tempest/Engine/thirdparty/spirv_cross")
+
+    set(IOS_STARTUP_TOOL_SOURCES
+      "${IOS_STARTUP_TOOL_SOURCE_DIR}/CMakeLists.txt"
+      "${IOS_STARTUP_TOOL_SOURCE_DIR}/main.cpp"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/spirv_cross.cpp"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/spirv_parser.cpp"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/spirv_cross_parsed_ir.cpp"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/spirv_cfg.cpp"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/spirv_glsl.cpp"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/spirv_msl.cpp")
+    file(GLOB IOS_STARTUP_SPIRV_CROSS_HEADERS CONFIGURE_DEPENDS
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/*.h"
+      "${IOS_STARTUP_SPIRV_CROSS_DIR}/*.hpp")
+
+    add_custom_command(
+      OUTPUT "${IOS_STARTUP_TOOL_STAMP}"
+      BYPRODUCTS "${IOS_STARTUP_TOOL_EXECUTABLE}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${IOS_STARTUP_TOOL_BINARY_DIR}"
+      COMMAND "${CMAKE_COMMAND}"
+        -S "${IOS_STARTUP_TOOL_SOURCE_DIR}"
+        -B "${IOS_STARTUP_TOOL_BINARY_DIR}"
+        -G "${CMAKE_GENERATOR}"
+        "-DSPIRV_CROSS_SOURCE_DIR=${IOS_STARTUP_SPIRV_CROSS_DIR}"
+        "-DCMAKE_CXX_COMPILER=${IOS_STARTUP_HOST_CXX}"
+        "-DCMAKE_OSX_SYSROOT=macosx"
+        "-DCMAKE_BUILD_TYPE=Release"
+      COMMAND "${CMAKE_COMMAND}" --build "${IOS_STARTUP_TOOL_BINARY_DIR}"
+        --config Release --target opengothic-ios-startup-msl
+      COMMAND "${CMAKE_COMMAND}" -E touch "${IOS_STARTUP_TOOL_STAMP}"
+      DEPENDS ${IOS_STARTUP_TOOL_SOURCES} ${IOS_STARTUP_SPIRV_CROSS_HEADERS}
+      COMMENT "Building the native iOS startup MSL generator"
+      VERBATIM)
+
+    set(IOS_STARTUP_RESOURCES)
+    set(IOS_STARTUP_BYPRODUCTS)
+    set(IOS_STARTUP_HASH_HEADER
+      "${IOS_STARTUP_DIR}/opengothic_ios_startup_hashes.h")
+    foreach(IOS_STARTUP_VERSION 20400 30000 30100)
+      foreach(IOS_STARTUP_SHADER Triangle Downscale)
+        list(APPEND IOS_STARTUP_RESOURCES
+          "${IOS_STARTUP_DIR}/OpenGothic${IOS_STARTUP_SHADER}_${IOS_STARTUP_VERSION}.metallib"
+          "${IOS_STARTUP_DIR}/OpenGothic${IOS_STARTUP_SHADER}_${IOS_STARTUP_VERSION}.mslsrc")
+        list(APPEND IOS_STARTUP_BYPRODUCTS
+          "${IOS_STARTUP_DIR}/OpenGothic${IOS_STARTUP_SHADER}_${IOS_STARTUP_VERSION}.air"
+          "${IOS_STARTUP_DIR}/OpenGothic${IOS_STARTUP_SHADER}_${IOS_STARTUP_VERSION}.max-profile.mslsrc")
+      endforeach()
+    endforeach()
+
+    add_custom_command(
+      OUTPUT ${IOS_STARTUP_RESOURCES} "${IOS_STARTUP_HASH_HEADER}"
+      BYPRODUCTS ${IOS_STARTUP_BYPRODUCTS}
       COMMAND "${CMAKE_COMMAND}"
         "-DSTARTUP_DIR=${IOS_STARTUP_DIR}"
-        "-DSTARTUP_METALLIB=${IOS_STARTUP_METALLIB}"
         "-DTRIANGLE_SPV=${IOS_STARTUP_TRIANGLE}"
         "-DDOWNSCALE_SPV=${IOS_STARTUP_DOWNSCALE}"
-        "-DSPIRV_CROSS=${OPENGOTHIC_SPIRV_CROSS_EXECUTABLE}"
+        "-DSTARTUP_MSL_TOOL=${IOS_STARTUP_TOOL_EXECUTABLE}"
         "-DXCRUN=${OPENGOTHIC_XCRUN_EXECUTABLE}"
-        "-DDEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
         "-DMETAL_SDK=${IOS_STARTUP_METAL_SDK}"
         "-DMETAL_TARGET=${IOS_STARTUP_METAL_TARGET}"
         -P "${CMAKE_SOURCE_DIR}/shader/build_ios_startup_metallib.cmake"
-      COMMENT "Building the limited iOS startup Metal library"
+      DEPENDS
+        "${IOS_STARTUP_TOOL_STAMP}"
+        "${IOS_STARTUP_SPIRV_STAMP}"
+        "${CMAKE_SOURCE_DIR}/shader/build_ios_startup_metallib.cmake"
+      COMMENT "Building six capability-independent iOS startup Metal libraries"
       VERBATIM)
 
-    set(OPENGOTHIC_IOS_STARTUP_METALLIB "${IOS_STARTUP_METALLIB}" PARENT_SCOPE)
+    add_custom_target(ios-startup-shaders DEPENDS
+      ${IOS_STARTUP_RESOURCES} "${IOS_STARTUP_HASH_HEADER}")
+    add_dependencies(ios-startup-shaders ios-startup-spirv)
+    add_dependencies(${PROJECT_NAME} ios-startup-shaders)
+    set(OPENGOTHIC_IOS_STARTUP_RESOURCES
+      ${IOS_STARTUP_RESOURCES} PARENT_SCOPE)
+    set(OPENGOTHIC_IOS_STARTUP_HEADER
+      "${IOS_STARTUP_HASH_HEADER}" PARENT_SCOPE)
+    set(OPENGOTHIC_IOS_STARTUP_TARGET
+      ios-startup-shaders PARENT_SCOPE)
   else()
     message(WARNING
-      "spirv-cross or xcrun was not found; the iOS startup metallib is disabled and runtime shader compilation remains active")
-    set(OPENGOTHIC_IOS_STARTUP_METALLIB "" PARENT_SCOPE)
+      "Native clang++, xcrun Metal tools, or the iOS deployment target is unavailable; precompiled startup shaders are disabled and Tempest will compile SPIR-V at runtime")
   endif()
 endif()

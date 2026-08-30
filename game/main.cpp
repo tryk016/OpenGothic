@@ -16,6 +16,9 @@
 
 #if defined(__IOS__)
 #include "utils/installdetect.h"
+#if defined(OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS_AVAILABLE)
+#include "iosstartupshaders.h"
+#endif
 #endif
 
 #include <cstdio>
@@ -91,6 +94,9 @@ std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const CommandLine& g) {
   options.shaderModuleCacheSize = OPENGOTHIC_IOS_METAL_SHADER_CACHE_SIZE;
 #if defined(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
   options.swapchainRenderMode = Tempest::MetalApi::SwapchainRenderMode::Direct;
+#endif
+#if defined(OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS_AVAILABLE)
+  addIOSStartupShaders(options);
 #endif
   return std::make_unique<Tempest::MetalApi>(flg,options);
 #else
