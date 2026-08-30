@@ -28,6 +28,7 @@ Supported systems are:
 * Windows (DX12, Vulkan)
 * Linux (Vulkan)
 * MacOS (Metal)
+* iOS / iPadOS (Metal)
 
 ## How to play
 ### Windows
@@ -71,6 +72,25 @@ Supported systems are:
    Change the line `exec "$DIR/Gothic2Notr" "$@"` to reflect your Gothic 2 path e.g.
 
    `exec "$DIR/Gothic2Notr" "$@" -g "~/PlayOnLinux's virtual drives/Gothic2_gog/drive_c/Gothic II"`
+
+### iOS / iPadOS
+1. Install [SideStore](https://sidestore.io) (recommended) or another client
+   compatible with AltStore sources.
+2. In **Sources → +**, add the OpenGothic iOS source:
+
+   `https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json`
+
+3. Install **OpenGothic MetalFX Temporal** from the source. The sideloading
+   client signs the otherwise unsigned IPA with your Apple account.
+4. Copy the **contents** of your legally owned Gothic II: Night of the Raven
+   installation into the app's `Documents` directory. `Data`, `_work` and
+   `system` must be directly inside `Documents`.
+
+Installing an update with the same `opengothic.gothic2` bundle identifier
+preserves game data and saves. Do not uninstall the existing app first unless
+you have backed up its complete `Documents` directory. See the
+[complete iOS installation guide](docs/ios/INSTALL.md) for SideStore, local
+Xcode installation, game-data transfer and troubleshooting.
 
 ---
 ### Modifications

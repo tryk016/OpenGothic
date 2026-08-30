@@ -1,11 +1,39 @@
 # Building and installing OpenGothic on iOS
 
-This guide covers a local Xcode installation and unsigned artifacts produced by
-continuous integration. OpenGothic does not distribute the original Gothic II
-data. You must supply files from a legally owned copy of *Gothic II: Night of
-the Raven*.
+This guide covers the maintained MetalFX Temporal release, SideStore/AltStore
+sideloading and local Xcode installation. OpenGothic does not distribute the
+original Gothic II data. You must supply files from a legally owned copy of
+*Gothic II: Night of the Raven*.
 
-## What you need
+## Install the release with SideStore or AltStore
+
+The maintained iOS release is an unsigned IPA. It is not an Apple App Store
+package and cannot be launched by opening it in Files; a sideloading client
+must sign it for your device first.
+
+For SideStore (recommended):
+
+1. Complete the one-time SideStore setup from [sidestore.io](https://sidestore.io).
+2. Open **Sources**, tap **+** and add this source URL:
+
+   `https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json`
+
+3. Open the new OpenGothic source and install **OpenGothic MetalFX Temporal**.
+4. When a newer version appears, choose **Update**. Do not uninstall the old
+   version first: an update using the same bundle identifier preserves game
+   data, settings and saves in `Documents`.
+
+AltStore and other clients compatible with AltStore sources can use the same
+`apps.json`. The IPA can also be downloaded directly from the
+[MetalFX Temporal release](https://github.com/tryk016/OpenGothic/releases/tag/ios-metalfx-temporal)
+and selected manually in the sideloading client. Free Apple-account signatures
+normally need periodic refresh; follow the selected client's current setup and
+refresh instructions.
+
+After the app is installed, continue with [Copy the game data](#copy-the-game-data).
+The release contains only the open-source engine, never Gothic II game assets.
+
+## What you need to build locally
 
 - An iPhone or iPad running iOS or iPadOS 15.0 or newer
 - A Mac with a current Xcode installation and Xcode command-line tools
@@ -19,10 +47,12 @@ in `PATH`.
 
 ## Clone the repository
 
-Clone OpenGothic together with all pinned dependencies:
+Until the iOS work is accepted upstream, clone the maintained integration fork
+together with all pinned dependencies:
 
 ```sh
-git clone --recurse-submodules https://github.com/Try/OpenGothic.git
+git clone --recurse-submodules --branch codex/ios-upstream-integration \
+  https://github.com/tryk016/OpenGothic.git
 cd OpenGothic
 ```
 
@@ -78,11 +108,10 @@ cmake --build build-ios --config Release --target Gothic2Notr -- \
 ```
 
 The repository's iOS CI also builds device, simulator, performance and runtime
-startup-fallback profiles. CI artifacts are unsigned validation outputs, not a
-stable binary release channel. An unsigned `.ipa` cannot be launched directly;
-it must be signed with credentials and entitlements valid for the target device
-before installation. Signing and third-party sideloading services are outside
-the OpenGothic project.
+startup-fallback profiles. CI artifacts are unsigned validation outputs, not
+the stable release channel. Use the release source above for normal
+installation, or sign a CI artifact with credentials and entitlements valid
+for the target device.
 
 For an arm64 Simulator configuration, replace both occurrences of `iphoneos`
 with `iphonesimulator`. Simulator artifacts are intended for development and CI

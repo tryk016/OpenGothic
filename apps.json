@@ -1,0 +1,32 @@
+{
+  "name": "OpenGothic iOS — MetalFX Temporal (Recommended)",
+  "identifier": "opengothic.gothic2.metalfx.temporal.source",
+  "sourceURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json",
+  "apps": [
+    {
+      "name": "OpenGothic MetalFX Temporal",
+      "bundleIdentifier": "opengothic.gothic2",
+      "developerName": "Try (engine) · iOS port",
+      "subtitle": "Recommended high-quality iOS build",
+      "localizedDescription": "OpenGothic for iPhone and iPad with MetalFX Temporal reconstruction, automatic MetalFX Spatial and Lanczos fallback, touch controls and physical-controller support. Requires legally owned Gothic II: Night of the Raven game data; no game assets are included.",
+      "iconURL": "https://raw.githubusercontent.com/tryk016/OpenGothic/ios-metalfx-temporal/ios/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+      "tintColor": "8B0000",
+      "category": "games",
+      "version": "1.3.0",
+      "versionDate": "2026-08-30",
+      "versionDescription": "OpenGothic iOS 1.3.0 based on current Try/OpenGothic and Try/Tempest, with MetalFX Temporal, four-direction touch D-pad, complete touch controls and automatic renderer fallback.",
+      "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/OpenGothic-iOS-1.3.0-MetalFX-Temporal.ipa",
+      "size": 12050097,
+      "versions": [
+        {
+          "version": "1.3.0",
+          "date": "2026-08-30",
+          "localizedDescription": "OpenGothic iOS 1.3.0 based on current Try/OpenGothic and Try/Tempest, with MetalFX Temporal, four-direction touch D-pad, complete touch controls and automatic renderer fallback.",
+          "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/OpenGothic-iOS-1.3.0-MetalFX-Temporal.ipa",
+          "size": 12050097
+        }
+      ]
+    }
+  ],
+  "news": []
+}
