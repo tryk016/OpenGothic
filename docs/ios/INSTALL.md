@@ -97,6 +97,8 @@ can be selected explicitly when testing:
 |---|---|
 | `OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT` | Use three frame-resource and Metal swapchain slots |
 | `OPENGOTHIC_IOS_DIRECT_DRAWABLE` | Prefer direct drawable rendering with copy fallback |
+| `OPENGOTHIC_NPC_ANIMATION_CULLING` | Skip full skeletal-pose work for distant, off-screen NPCs while preserving animation events |
+| `OPENGOTHIC_NPC_DIALOG_CULLING` | Experimental aggressive dialog/cutscene mode; not enabled in the recommended profile |
 | `OPENGOTHIC_METALFX_SPATIAL` | Enable MetalFX Spatial where available |
 | `OPENGOTHIC_METALFX_TEMPORAL` | Enable MetalFX Temporal; requires Spatial for fallback |
 | `OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS` | Bundle the verified startup shader set; enabled by default |
@@ -111,6 +113,7 @@ cmake -S . -B build-ios-performance -G Xcode \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
   -DOPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT=ON \
   -DOPENGOTHIC_IOS_DIRECT_DRAWABLE=ON \
+  -DOPENGOTHIC_NPC_ANIMATION_CULLING=ON \
   -DOPENGOTHIC_METALFX_SPATIAL=ON \
   -DOPENGOTHIC_METALFX_TEMPORAL=ON
 ```

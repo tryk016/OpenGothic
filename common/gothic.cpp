@@ -115,7 +115,7 @@ Gothic::Gothic() {
 #endif
   iniFile.reset(new IniFile(u"Gothic.ini"));
 #if defined(__IOS__)
-  constexpr int iosProfileVersion = 3;
+  constexpr int iosProfileVersion = 4;
   bool          iosProfileChanged = false;
   if(!hasUserIni) {
     // Keep the copied PC system/Gothic.ini untouched. This small writable
@@ -123,7 +123,7 @@ Gothic::Gothic() {
     iniFile->set("GAME",     "useQuickSaveKeys",  1);
     iniFile->set("INTERNAL", "vidResIndex",       2);
     iniFile->set("ENGINE",   "zCloudShadowScale", 0);
-    iniFile->set("ENGINE",   "shadowResolution", 1024);
+    iniFile->set("ENGINE",   "shadowResolution", 512);
     iniFile->set("ENGINE",   "zMaxFps",           30);
     iniFile->set("GAMEPAD",  "deadZone",          0.25f);
     iniFile->set("GAMEPAD",  "analogDeadZone",    0.10f);
@@ -136,10 +136,12 @@ Gothic::Gothic() {
     iosProfileChanged = true;
     }
   else if(iniFile->getI("INTERNAL","iosProfileVersion",0)<iosProfileVersion) {
-    // Upgrade only values that can be identified as the previous generated
-    // profile.
-    if(iniFile->getI("ENGINE","shadowResolution",-1)==512)
-      iniFile->set("ENGINE", "shadowResolution", 1024);
+    // Version 3 was only used by the unreleased 1.3.0 development build and
+    // generated 1024 px shadow maps. Move that generated profile back to the
+    // lower-cost mobile default; all other explicit values remain untouched.
+    if(iniFile->getI("INTERNAL","iosProfileVersion",0)==3 &&
+       iniFile->getI("ENGINE","shadowResolution",-1)==1024)
+      iniFile->set("ENGINE", "shadowResolution", 512);
     iosProfileChanged = true;
     }
   // Old iOS builds encoded Off/30/60 as an implementation-only mode. Migrate
@@ -196,7 +198,7 @@ Gothic::Gothic() {
 #if defined(__IOS__)
   // Default to the device-friendly 30 FPS, while DeviceSettings permits 0/60.
   defaults->set("ENGINE",       "zMaxFps",           30);
-  defaults->set("ENGINE",       "shadowResolution", 1024);
+  defaults->set("ENGINE",       "shadowResolution",  512);
   defaults->set("ENGINE",       "iOSUiLanguage",     -1);
 #endif
 

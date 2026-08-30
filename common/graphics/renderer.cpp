@@ -144,6 +144,7 @@ void Renderer::setupSettings() {
   if(sr<=0)
     sr = 512;
   settings.shadowResolution = uint32_t(std::clamp(sr, 256, 4096));
+  Tempest::Log::i("iOS shadow-map resolution: ",settings.shadowResolution,'x',settings.shadowResolution);
   }
 #endif
   settings.zFogRadial         = Gothic::settingsGetI("RENDERER_D3D","zFogRadial")!=0;
