@@ -16,14 +16,14 @@
       "versionDate": "2026-08-30",
       "versionDescription": "OpenGothic iOS 1.3.0 based on current Try/OpenGothic and Try/Tempest, with MetalFX Temporal, four-direction touch D-pad, complete touch controls and automatic renderer fallback.",
       "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/OpenGothic-iOS-1.3.0-MetalFX-Temporal.ipa",
-      "size": 12050097,
+      "size": 12050089,
       "versions": [
         {
           "version": "1.3.0",
           "date": "2026-08-30",
           "localizedDescription": "OpenGothic iOS 1.3.0 based on current Try/OpenGothic and Try/Tempest, with MetalFX Temporal, four-direction touch D-pad, complete touch controls and automatic renderer fallback.",
           "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/OpenGothic-iOS-1.3.0-MetalFX-Temporal.ipa",
-          "size": 12050097
+          "size": 12050089
         }
       ]
     }
