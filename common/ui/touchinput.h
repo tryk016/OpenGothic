@@ -37,13 +37,20 @@ class TouchInput : public Tempest::Widget {
       SystemView, SystemMenu
       };
     struct Btn  { int x, y, s; PadGlyph::Btn glyph; TAct kind; KeyCodec::Action act; };
+    struct PadArea { int x, y, w, h; };
+    struct WorldLayout {
+      std::array<Btn,16> buttons;
+      PadArea            move;
+      PadArea            look;
+      };
     struct MBtn { int x, y, s; Tempest::Event::KeyType key; };
     struct PageBtn { int x, y, s; PadGlyph::Btn glyph; int direction; };
 #if defined(__IOS__)
     struct DeviceBtn { int x, y, s; };
 #endif
 
-    std::array<Btn,16> layout()       const;   // full virtual pad (World)
+    WorldLayout worldLayout()         const;   // buttons and both touch-stick hit areas
+    std::array<PadArea,3> ringControls() const; // item, weapons, cancel
     std::array<MBtn,6> menuLayout()   const;   // menu / inventory: dpad + ok/back
     std::array<MBtn,4> dialogLayout() const;   // dialogue: up/down/select/skip
     std::array<PageBtn,2> characterPageLayout() const;

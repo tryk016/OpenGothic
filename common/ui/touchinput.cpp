@@ -20,6 +20,7 @@
 #include "resources.h"
 #include "mainwindow.h"
 #include "gothic.h"
+#include "utils/safearea.h"
 
 using namespace Tempest;
 using A = KeyCodec::Action;
@@ -41,8 +42,84 @@ TouchInput::TouchInput(MainWindow& owner, PlayerControl& ctrl)
   : owner(owner), ctrl(ctrl) {
   }
 
-std::array<TouchInput::Btn,16> TouchInput::layout() const {
+namespace {
+struct TouchBounds {
+  int left=0, top=0, right=0, bottom=0;
+  };
+
+TouchBounds touchBounds(int w, int h) {
+#if defined(__IOS__)
+  const auto in = SafeArea::insets();
+  const int l = std::clamp(in.left,0,w);
+  const int t = std::clamp(in.top,0,h);
+  return {l,t,std::clamp(w-in.right,l,w),std::clamp(h-in.bottom,t,h)};
+#else
+  return {0,0,w,h};
+#endif
+  }
+
+template<class Rect>
+bool contains(const Rect& r, const Point& p) {
+  return p.x>=r.x && p.x<r.x+r.w && p.y>=r.y && p.y<r.y+r.h;
+  }
+}
+
+TouchInput::WorldLayout TouchInput::worldLayout() const {
   const int W = w(), H = h();
+#if defined(__IOS__)
+  const auto cb = touchBounds(W,H);
+  const int cw = std::max(1,cb.right-cb.left);
+  const int ch = std::max(1,cb.bottom-cb.top);
+  const int s  = std::max(24,ch/10);
+  const int m  = std::max(6,ch/45);
+  const int g  = std::max(4,ch/70);
+  const int step = s+g;
+
+  const int faceCx = cb.right-m-s/2-step;
+  const int faceCy = cb.bottom-m-s/2-step;
+  // Width also participates so iPad's 4:3 landscape does not let two sticks
+  // crowd the D-pad and face cluster. Phones still get a roughly 30%-height
+  // stick, while tablets use a balanced ~1/6-content-width diameter.
+  const int stick  = std::max(2*s,std::min(3*s,cw/6));
+  const int faceLeft = faceCx-step-s/2;
+  const int rightStickX = std::max(cb.left+cw/2,faceLeft-2*g-stick);
+  const int stickY = cb.bottom-m-stick;
+  const int desiredDcx = cb.left+int(float(cw)*0.43f);
+  const int minDcx = cb.left+m+stick+g+step;
+  const int maxDcx = rightStickX-g-step-s;
+  const int dcx = minDcx<=maxDcx ? std::clamp(desiredDcx,minDcx,maxDcx) : desiredDcx;
+  const int dcy = cb.bottom-m-s-step;
+  const int row = cb.top+m;
+  const int center = (cb.left+cb.right)/2;
+  namespace G = PadGlyph;
+  using     K = TAct;
+  WorldLayout ret{{{
+    // Equal-size face buttons in a diamond, clear of the full-size right stick.
+    { faceCx-s/2,      faceCy+step-s/2, s, G::A, K::Interact, A::ActionGeneric },
+    { faceCx+step-s/2, faceCy-s/2,      s, G::B, K::Special,  A::PadSpecial    },
+    { faceCx-step-s/2, faceCy-s/2,      s, G::X, K::Key,      A::Jump          },
+    { faceCx-s/2,      faceCy-step-s/2, s, G::Y, K::Key,      A::Weapon        },
+    // Shoulders and triggers follow the reference's horizontal top rows.
+    { cb.right-m-s,          row, s, G::RT, K::Rt, A::PadAttack       },
+    { cb.right-m-2*s-2*g,    row, s, G::RB, K::Rb, A::PadAttackRight },
+    { cb.left+m,             row, s, G::LT, K::Lt, A::PadAim          },
+    { cb.left+m+s+2*g,       row, s, G::LB, K::Lb, A::PadAttackLeft   },
+    // Stick clicks.
+    { cb.left+m, cb.top+ch/2-s/2, s, G::L3, K::Key,  A::Sneak         },
+    { rightStickX+(stick-s)/2, cb.top+ch/2-s/2, s, G::R3, K::Lock, A::ActionGeneric },
+    // D-pad and ring/focus actions.
+    { dcx,      dcy-step, s, G::DPadUp,    K::ItemRing,      A::Idle },
+    { dcx,      dcy+step, s, G::DPadDown,  K::WeaponsRing,   A::Idle },
+    { dcx-step, dcy,      s, G::DPadLeft,  K::JournalOrFocus,A::Idle },
+    { dcx+step, dcy,      s, G::DPadRight, K::MapOrFocus,    A::Idle },
+    // View/menu remain centred and clear of the Dynamic Island safe area.
+    { center-(s+g), row, s, G::View, K::SystemView, A::Inventory },
+    { center+g,     row, s, G::Menu, K::SystemMenu, A::Escape    },
+  }},
+  {cb.left+m,stickY,stick,stick},
+  {rightStickX,stickY,stick,stick}};
+  return ret;
+#else
   const int s  = H/11;
   const int m  = H/40;
   const int bx = W-s-m, by = H-s-m;                 // face cluster anchor (bottom-right)
@@ -51,7 +128,7 @@ std::array<TouchInput::Btn,16> TouchInput::layout() const {
   const int dcx = int(float(W)*0.44f), dcy = H-int(float(s)*1.7f)-m;   // d-pad centre
   namespace G = PadGlyph;
   using     K = TAct;
-  return {{
+  return {{{
     // face
     { bx,        by,        s, G::A, K::Interact, A::ActionGeneric },
     { bx,        by-(s+m),  s, G::B, K::Special,  A::PadSpecial    },
@@ -73,11 +150,43 @@ std::array<TouchInput::Btn,16> TouchInput::layout() const {
     // system
     { W/2-(s+m), m, s, G::View, K::SystemView, A::Inventory },
     { W/2+m,     m, s, G::Menu, K::SystemMenu, A::Escape    },
+  }},
+  {H/20,H-H/3-H/20,H/3,H/3},
+  {W/2+1,0,std::max(0,W-(W/2+1)),H}};
+#endif
+  }
+
+std::array<TouchInput::PadArea,3> TouchInput::ringControls() const {
+  const auto cb = touchBounds(w(),h());
+  const int ch = std::max(1,cb.bottom-cb.top);
+  const int s = ch/10;
+  const int m = ch/40;
+  return {{
+    {cb.left+m,cb.bottom-2*s-2*m,s,s},
+    {cb.left+m,cb.bottom-s-m,    s,s},
+    {cb.right-s-m,cb.bottom-s-m, s,s},
   }};
   }
 
 std::array<TouchInput::MBtn,6> TouchInput::menuLayout() const {
   const int W = w(), H = h();
+#if defined(__IOS__)
+  const auto cb = touchBounds(W,H);
+  const int ch = std::max(1,cb.bottom-cb.top);
+  const int s  = ch/9;
+  const int m  = ch/40;
+  using E = Tempest::Event;
+  const int cx = cb.left+m+s;
+  const int by = cb.bottom-m;
+  return {{
+    { cx,          by-3*s-2*m,  s, E::K_Up     },
+    { cx,          by-s,        s, E::K_Down   },
+    { cx-(s+m),    by-2*s-m,    s, E::K_Left   },
+    { cx+(s+m),    by-2*s-m,    s, E::K_Right  },
+    { cb.right-2*(s+m), by-s,   s, E::K_Return },
+    { cb.right-(s+m),   by-s,   s, E::K_ESCAPE },
+  }};
+#else
   const int s  = H/9;
   const int m  = H/40;
   using E = Tempest::Event;
@@ -91,10 +200,26 @@ std::array<TouchInput::MBtn,6> TouchInput::menuLayout() const {
     { W-2*(s+m),   by-s,        s, E::K_Return },
     { W-(s+m),     by-s,        s, E::K_ESCAPE },
   }};
+#endif
   }
 
 std::array<TouchInput::MBtn,4> TouchInput::dialogLayout() const {
   const int W = w(), H = h();
+#if defined(__IOS__)
+  const auto cb = touchBounds(W,H);
+  const int ch = std::max(1,cb.bottom-cb.top);
+  const int s  = ch/9;
+  const int m  = ch/40;
+  using E = Tempest::Event;
+  const int cx = cb.left+m+s;
+  const int by = cb.bottom-m;
+  return {{
+    { cx,          by-3*s-2*m,  s, E::K_Up     },
+    { cx,          by-s,        s, E::K_Down   },
+    { cb.right-2*(s+m), by-s,   s, E::K_Return },
+    { cb.right-(s+m),   by-s,   s, E::K_ESCAPE },
+  }};
+#else
   const int s  = H/9;
   const int m  = H/40;
   using E = Tempest::Event;
@@ -106,23 +231,37 @@ std::array<TouchInput::MBtn,4> TouchInput::dialogLayout() const {
     { W-2*(s+m),   by-s,        s, E::K_Return },
     { W-(s+m),     by-s,        s, E::K_ESCAPE },
   }};
+#endif
   }
 
 std::array<TouchInput::PageBtn,2> TouchInput::characterPageLayout() const {
+#if defined(__IOS__)
+  const auto cb = touchBounds(w(),h());
+  const int ch = std::max(1,cb.bottom-cb.top);
+  const int s = ch/9, m = ch/40;
+  const int cx = (cb.left+cb.right)/2;
+  return {{
+    { cx-s-m, cb.top+m, s, PadGlyph::LB, -1 },
+    { cx+m,   cb.top+m, s, PadGlyph::RB,  1 },
+  }};
+#else
   const int s = h()/9, m = h()/40;
   return {{
     { w()/2-s-m, m, s, PadGlyph::LB, -1 },
     { w()/2+m,   m, s, PadGlyph::RB,  1 },
   }};
+#endif
   }
 
 #if defined(__IOS__)
 TouchInput::DeviceBtn TouchInput::deviceButton() const {
-  const int s = h()/11;
-  const int m = h()/40;
+  const auto cb = touchBounds(w(),h());
+  const int ch = std::max(1,cb.bottom-cb.top);
+  const int s = ch/11;
+  const int m = ch/40;
   // Menu navigation is anchored at the bottom; this leaves it and the
   // character-page LB/RB controls untouched.
-  return {w()-s-m,m,s};
+  return {cb.right-s-m,cb.top+m,s};
   }
 #endif
 
@@ -190,10 +329,10 @@ void TouchInput::paintEvent(PaintEvent& e) {
     // modal controls in the empty corners: panel switch and explicit cancel.
     Painter p(e);
     auto& fnt = Resources::font(Gothic::interfaceScale(this));
-    const int s = h()/10, m = h()/40;
-    PadGlyph::draw(p,fnt,PadGlyph::DPadUp,  m,h()-2*s-2*m,s);
-    PadGlyph::draw(p,fnt,PadGlyph::DPadDown,m,h()-s-m,    s);
-    PadGlyph::draw(p,fnt,PadGlyph::B,w()-s-m,h()-s-m,    s);
+    const auto c = ringControls();
+    PadGlyph::draw(p,fnt,PadGlyph::DPadUp,  c[0].x,c[0].y,c[0].w);
+    PadGlyph::draw(p,fnt,PadGlyph::DPadDown,c[1].x,c[1].y,c[1].w);
+    PadGlyph::draw(p,fnt,PadGlyph::B,       c[2].x,c[2].y,c[2].w);
     return;
     }
   if(Gamepad::poll().connected)
@@ -206,17 +345,25 @@ void TouchInput::paintEvent(PaintEvent& e) {
     // A bink is playing: don't cover it with menu buttons, just hint that a tap skips it.
     const char* hint = "Tap to skip";
     const auto  ts   = fnt.textSize(hint);
-    fnt.drawText(p, w()-ts.w-h()/20, h()-h()/20, hint);
+    const auto cb = touchBounds(w(),h());
+    const int m = std::max(1,(cb.bottom-cb.top)/20);
+    fnt.drawText(p,cb.right-ts.w-m,cb.bottom-m,hint);
     return;
     }
 
   switch(owner.padContext()) {
     case PadCtx::World: {
-      const int H  = h();
-      const int ms = H/3, mm = H/20;
-      PadGlyph::draw(p, fnt, PadGlyph::LStick, mm, H-ms-mm, ms, 0.7f);   // movement pad
-      for(auto& b:layout())
+      const auto wl = worldLayout();
+#if defined(__IOS__)
+      PadGlyph::drawTouch(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.72f);
+      PadGlyph::drawTouch(p,fnt,PadGlyph::RStick,wl.look.x,wl.look.y,wl.look.w,0.72f);
+      for(auto& b:wl.buttons)
+        PadGlyph::drawTouch(p,fnt,b.glyph,b.x,b.y,b.s,0.76f);
+#else
+      PadGlyph::draw(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.7f);
+      for(auto& b:wl.buttons)
         PadGlyph::draw(p, fnt, b.glyph, b.x, b.y, b.s);
+#endif
       break;
       }
     case PadCtx::Dialog:
@@ -239,9 +386,8 @@ void TouchInput::paintEvent(PaintEvent& e) {
     case PadCtx::Inventory: {
       for(auto& b:menuLayout())
         PadGlyph::draw(p, fnt, glyphOfKey(b.key), b.x, b.y, b.s);
-      const int s = h()/9, m = h()/40;
-      PadGlyph::draw(p,fnt,PadGlyph::LB,w()/2-s-m,m,s);
-      PadGlyph::draw(p,fnt,PadGlyph::RB,w()/2+m,  m,s);
+      for(auto& b:characterPageLayout())
+        PadGlyph::draw(p,fnt,b.glyph,b.x,b.y,b.s);
       break;
       }
     case PadCtx::Loading:
@@ -271,19 +417,16 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
     // A radial ring is open -> corners switch/cancel; every other touch aims
     // and commits on release.
     if(owner.padRingOpen()) {
-      const int s = h()/10, m = h()/40;
-      if(pos.x>=w()-s-m && pos.x<w()-m &&
-         pos.y>=h()-s-m && pos.y<h()-m) {
+      const auto c = ringControls();
+      if(contains(c[2],pos)) {
         owner.padRingCancel();
         return;
         }
-      if(pos.x>=m && pos.x<m+s &&
-         pos.y>=h()-2*s-2*m && pos.y<h()-s-2*m) {
+      if(contains(c[0],pos)) {
         owner.padOpenItemRing();
         return;
         }
-      if(pos.x>=m && pos.x<m+s &&
-         pos.y>=h()-s-m && pos.y<h()-m) {
+      if(contains(c[1],pos)) {
         owner.padOpenWeaponsRing();
         return;
         }
@@ -302,7 +445,8 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
       btnDown[id] = action;
       };
 
-    for(auto& b:layout())
+    const auto wl = worldLayout();
+    for(auto& b:wl.buttons)
       if(pos.x>=b.x && pos.x<b.x+b.s && pos.y>=b.y && pos.y<b.y+b.s) {
         switch(b.kind) {
           case TAct::Key:
@@ -366,12 +510,11 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
           }
         }
 
-    const int H = h(), ms = H/3, mm = H/20;
-    if(pos.x>=mm && pos.x<mm+ms && pos.y>=H-ms-mm && pos.y<H-mm) {
+    if(contains(wl.move,pos)) {
       moveId = id; moveOrigin = pos;
       return;
       }
-    if(pos.x > w()/2) {
+    if(contains(wl.look,pos)) {
       lookId = id; lookLast = pos;
       return;
       }
@@ -395,19 +538,11 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
     return;
     }
   if(ctx==PadCtx::Inventory) {
-    const int s = h()/9, m = h()/40;
-    const int left = w()/2-s-m;
-    const int right = w()/2+m;
-    if(pos.y>=m && pos.y<m+s) {
-      if(pos.x>=left && pos.x<left+s) {
-        owner.padInventoryCategory(-1);
+    for(auto& b:characterPageLayout())
+      if(pos.x>=b.x && pos.x<b.x+b.s && pos.y>=b.y && pos.y<b.y+b.s) {
+        owner.padInventoryCategory(b.direction);
         return;
         }
-      if(pos.x>=right && pos.x<right+s) {
-        owner.padInventoryCategory(1);
-        return;
-        }
-      }
     }
   if(ctx==PadCtx::Menu && owner.padCharacterPageActive()) {
     for(auto& b:characterPageLayout())
@@ -457,8 +592,12 @@ void TouchInput::mouseDragEvent(MouseEvent& e) {
     }
 
   if(id==moveId) {
-    const int H  = h();
-    const int dz = H/16;          // dead-zone
+    const auto wl = worldLayout();
+#if defined(__IOS__)
+    const int dz = std::max(1,std::min(wl.move.w,wl.move.h)/5);
+#else
+    const int dz = h()/16;
+#endif
     const int dx = pos.x - moveOrigin.x;
     const int dy = pos.y - moveOrigin.y;
     auto set = [&](int idx, bool on, A a){
