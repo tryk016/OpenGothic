@@ -73,33 +73,31 @@ DeviceSettings::Layout DeviceSettings::layout() const {
   if(safeW<=0 || safeH<=0)
     return ret;
 
-  const int marginX = std::min(16,std::max(0,safeW/12));
-  const int marginY = std::min(16,std::max(0,safeH/12));
+  const int marginX = std::clamp(safeW/50,8,20);
+  const int marginY = std::clamp(safeH/32,8,20);
   const int availableW = std::max(0,safeW-2*marginX);
   const int availableH = std::max(0,safeH-2*marginY);
-  const int desiredW   = std::max(280,int(float(safeW)*0.58f));
-  const int desiredH   = std::max(220,int(float(safeH)*0.30f));
+  const int desiredW   = std::clamp(int(float(safeW)*0.30f),300,520);
+  const int desiredH   = std::max(260,int(float(safeH)*0.82f));
   ret.panel.w = std::min(availableW,desiredW);
   ret.panel.h = std::min(availableH,desiredH);
-  ret.panel.x = safeLeft+(safeW-ret.panel.w)/2;
-  ret.panel.y = safeBottom-marginY-ret.panel.h;
+  ret.panel.x = safeRight-marginX-ret.panel.w;
+  ret.panel.y = safeTop+(safeH-ret.panel.h)/2;
 
-  ret.gap = std::min(std::max(4,ret.panel.w/70),
-                     std::max(0,ret.panel.w/8));
+  ret.gap = std::clamp(ret.panel.w/24,10,20);
   const int innerX = ret.panel.x+ret.gap;
   const int innerW = std::max(0,ret.panel.w-2*ret.gap);
   const int innerRight = innerX+innerW;
 
-  ret.titleBaseline      = ret.panel.y+13*ret.panel.h/100;
-  ret.frameRateBaseline  = ret.panel.y+27*ret.panel.h/100;
-  ret.controlledBaseline = ret.panel.y+58*ret.panel.h/100;
-  ret.languageBaseline   = ret.panel.y+65*ret.panel.h/100;
-  ret.footerBaseline     = ret.panel.y+96*ret.panel.h/100;
+  ret.titleBaseline      = ret.panel.y+11*ret.panel.h/100;
+  ret.frameRateBaseline  = ret.panel.y+25*ret.panel.h/100;
+  ret.controlledBaseline = ret.panel.y+51*ret.panel.h/100;
+  ret.languageBaseline   = ret.panel.y+64*ret.panel.h/100;
 
-  ret.frameRateRow = {innerX,ret.panel.y+19*ret.panel.h/100,
-                      innerW,42*ret.panel.h/100};
+  ret.frameRateRow = {innerX,ret.panel.y+18*ret.panel.h/100,
+                      innerW,39*ret.panel.h/100};
   const int fpsY = ret.panel.y+30*ret.panel.h/100;
-  const int fpsH = std::max(28,18*ret.panel.h/100);
+  const int fpsH = std::max(30,14*ret.panel.h/100);
   const int buttonsW = std::max(0,innerW-2*ret.gap);
   const int fpsW = buttonsW/3;
   for(size_t i=0; i<ret.frameRateButtons.size(); ++i) {
@@ -109,22 +107,26 @@ DeviceSettings::Layout DeviceSettings::layout() const {
     ret.frameRateButtons[i] = {x,fpsY,bw,fpsH};
     }
 
-  ret.languageRow = {innerX,ret.panel.y+61*ret.panel.h/100,
-                     innerW,29*ret.panel.h/100};
+  ret.languageRow = {innerX,ret.panel.y+58*ret.panel.h/100,
+                     innerW,28*ret.panel.h/100};
   const int languageY = ret.panel.y+69*ret.panel.h/100;
-  const int languageH = std::max(28,16*ret.panel.h/100);
+  const int languageH = std::max(30,14*ret.panel.h/100);
   ret.languageButton = {innerX,languageY,innerW,
                         std::min(languageH,std::max(0,ret.panel.y+ret.panel.h-ret.gap-languageY))};
+  const int backY = ret.panel.y+87*ret.panel.h/100;
+  ret.backButton = {innerX,backY,innerW,
+                    std::max(30,9*ret.panel.h/100)};
   return ret;
   }
 
 bool DeviceSettings::isFrameRateLocked() const {
-  return Gothic::options().fpsLimit>0;
+  // The native iOS selector is the user-facing authority. SystemPack's
+  // FPS_Limit remains authoritative on desktop, but must not turn these
+  // visibly interactive mobile buttons into no-ops.
+  return false;
   }
 
 int DeviceSettings::frameRate() const {
-  if(isFrameRateLocked())
-    return Gothic::options().fpsLimit;
   const int fps = Gothic::settingsGetI("ENGINE","zMaxFps");
   for(const int value:rates)
     if(fps==value)
@@ -241,6 +243,11 @@ void DeviceSettings::mouseDownEvent(MouseEvent& event) {
     event.accept();
     return;
     }
+  if(geometry.backButton.contains(pos.x,pos.y)) {
+    close();
+    event.accept();
+    return;
+    }
   if(geometry.frameRateRow.contains(pos.x,pos.y)) {
     selectedRow = Row::FrameRate;
     update();
@@ -261,6 +268,20 @@ void DeviceSettings::mouseDownEvent(MouseEvent& event) {
   event.accept();
   }
 
+void DeviceSettings::mouseDragEvent(MouseEvent& event) {
+  if(active)
+    event.accept();
+  else
+    event.ignore();
+  }
+
+void DeviceSettings::mouseUpEvent(MouseEvent& event) {
+  if(active)
+    event.accept();
+  else
+    event.ignore();
+  }
+
 void DeviceSettings::paintEvent(PaintEvent& event) {
   if(!active)
     return;
@@ -270,20 +291,33 @@ void DeviceSettings::paintEvent(PaintEvent& event) {
   auto& gthFont = Resources::font(scale);
   const ScriptLang language = IosUiLocalization::currentLanguage();
   const auto& txt = IosUiLocalization::deviceSettings(language);
-
-  // Keep the complete mapping in its own native layer, never in Controls.
-  PadDiagram::draw(p,gthFont,w(),h(),scale,language,false);
-  const IosUiFont uiFont(p.font(),gthFont,language);
-
   const Layout geometry = layout();
   if(geometry.panel.w<=0 || geometry.panel.h<=0)
     return;
 
-  p.setBrush(Color(0.06f,0.06f,0.08f,0.93f));
+  // Keep the complete mapping in its own native layer, never in Controls.
+  // Its smaller independent scale leaves readable breathing room on phones;
+  // the right edge reserves a dedicated, non-overlapping settings column.
+  const float diagramScale = std::min(scale,1.65f);
+  auto& diagramFont = Resources::font(diagramScale);
+  const int diagramRight = std::max(1,geometry.panel.x-geometry.gap);
+  PadDiagram::draw(p,diagramFont,w(),h(),diagramScale,language,false,
+                   diagramRight);
+  const IosUiFont uiFont(p.font(),gthFont,language);
+
+  p.setBrush(Color(0.045f,0.047f,0.055f,0.97f));
   p.drawRect(geometry.panel.x,geometry.panel.y,geometry.panel.w,geometry.panel.h);
+  const int border = std::max(1,int(scale));
+  p.setBrush(Color(0.72f,0.53f,0.20f,0.82f));
+  p.drawRect(geometry.panel.x,geometry.panel.y,geometry.panel.w,border);
+  p.drawRect(geometry.panel.x,geometry.panel.y+geometry.panel.h-border,
+             geometry.panel.w,border);
+  p.drawRect(geometry.panel.x,geometry.panel.y,border,geometry.panel.h);
+  p.drawRect(geometry.panel.x+geometry.panel.w-border,geometry.panel.y,
+             border,geometry.panel.h);
   const Box& selected = selectedRow==Row::FrameRate ?
                         geometry.frameRateRow : geometry.languageRow;
-  p.setBrush(Color(0.22f,0.17f,0.08f,0.52f));
+  p.setBrush(Color(0.25f,0.19f,0.08f,0.48f));
   p.drawRect(selected.x,selected.y,selected.w,selected.h);
   uiFont.drawText(p,geometry.panel.x+geometry.gap,geometry.titleBaseline,txt.title);
   uiFont.drawText(p,geometry.panel.x+geometry.gap,geometry.frameRateBaseline,txt.frameRate);
@@ -305,8 +339,28 @@ void DeviceSettings::paintEvent(PaintEvent& event) {
     }
   if(locked) {
     string_frm message(txt.controlled," (",current," FPS)");
-    uiFont.drawText(p,geometry.panel.x+geometry.gap,
-                    geometry.controlledBaseline,message);
+    const std::string prepared = uiFont.prepareText(message);
+    const int maxWidth = geometry.panel.w-2*geometry.gap;
+    size_t split = prepared.size();
+    for(size_t at=prepared.find(' '); at!=std::string::npos;
+        at=prepared.find(' ',at+1)) {
+      if(uiFont.textSizePrepared(prepared.substr(0,at)).w<=maxWidth)
+        split = at;
+      else
+        break;
+      }
+    if(uiFont.textSizePrepared(prepared).w<=maxWidth || split==prepared.size()) {
+      uiFont.drawTextPrepared(p,geometry.panel.x+geometry.gap,
+                              geometry.controlledBaseline,prepared);
+      }
+    else {
+      uiFont.drawTextPrepared(p,geometry.panel.x+geometry.gap,
+                              geometry.controlledBaseline,
+                              prepared.substr(0,split));
+      uiFont.drawTextPrepared(p,geometry.panel.x+geometry.gap,
+                              geometry.controlledBaseline+uiFont.pixelSize(),
+                              prepared.substr(split+1));
+      }
     }
 
   uiFont.drawText(p,geometry.panel.x+geometry.gap,geometry.languageBaseline,"UI");
@@ -325,9 +379,13 @@ void DeviceSettings::paintEvent(PaintEvent& event) {
                   geometry.languageButton.y+(geometry.languageButton.h+languageSize.h)/2,
                   languageLabel);
 
+  p.setBrush(Color(0.20f,0.20f,0.24f,0.95f));
+  p.drawRect(geometry.backButton.x,geometry.backButton.y,
+             geometry.backButton.w,geometry.backButton.h);
   const auto backSize = uiFont.textSize(txt.back);
-  uiFont.drawText(p,geometry.panel.x+geometry.panel.w-geometry.gap-backSize.w,
-                  geometry.footerBaseline,txt.back);
+  uiFont.drawText(p,geometry.backButton.x+(geometry.backButton.w-backSize.w)/2,
+                  geometry.backButton.y+(geometry.backButton.h+backSize.h)/2,
+                  txt.back);
   }
 
 #endif

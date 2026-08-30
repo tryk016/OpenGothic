@@ -20,6 +20,8 @@ class DeviceSettings final : public Tempest::Widget {
     void keyDownEvent (Tempest::KeyEvent& event) override;
     void keyUpEvent   (Tempest::KeyEvent& event) override;
     void mouseDownEvent(Tempest::MouseEvent& event) override;
+    void mouseDragEvent(Tempest::MouseEvent& event) override;
+    void mouseUpEvent  (Tempest::MouseEvent& event) override;
 
   protected:
     void paintEvent(Tempest::PaintEvent& event) override;
@@ -42,12 +44,12 @@ class DeviceSettings final : public Tempest::Widget {
       std::array<Box,3> frameRateButtons;
       Box               languageRow;
       Box               languageButton;
+      Box               backButton;
       int               gap=0;
       int               titleBaseline=0;
       int               frameRateBaseline=0;
       int               controlledBaseline=0;
       int               languageBaseline=0;
-      int               footerBaseline=0;
       };
 
     Layout        layout() const;

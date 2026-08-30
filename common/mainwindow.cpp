@@ -515,9 +515,15 @@ void MainWindow::tickMouse(uint64_t dt) {
   }
 
 void MainWindow::onSettings() {
+#if defined(__IOS__)
+  // iOS exposes zMaxFps as a native, live setting. Keep SystemPack's
+  // FPS_Limit behaviour unchanged on every other platform.
+  int zMaxFps = Gothic::inst().settingsGetI("ENGINE", "zMaxFps");
+#else
   int zMaxFps = Gothic::options().fpsLimit;
   if(zMaxFps<=0)
     zMaxFps = Gothic::inst().settingsGetI("ENGINE", "zMaxFps");
+#endif
   maxFpsTarget = uint32_t(std::max(zMaxFps,0));
   if(zMaxFps>0)
     maxFpsInv = 1000u/uint64_t(zMaxFps); else
