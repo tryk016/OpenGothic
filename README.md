@@ -1,209 +1,138 @@
-## OpenGothic
-Open source re-implementation of Gothic 2: Night of the Raven.
+# OpenGothic for iOS
 
-Motivation: The original Gothic 1 and Gothic 2 are still great games, but it's not easy to make them work on modern systems.
-The goal of this project is to make a feature-complete Gothic game client, compatible with the original game data and mods.
+An **unofficial iPhone and iPad port** of
+[Try/OpenGothic](https://github.com/Try/OpenGothic), the open-source
+reimplementation of *Gothic II: Night of the Raven*. This branch provides a
+ready-to-sideload iOS build with touch controls, physical-controller support
+and a mobile performance profile.
 
-----
-[![Latest build](https://img.shields.io/github/release-pre/Try/opengothic?style=for-the-badge)](https://github.com/Try/opengothic/releases/latest)
-[![](https://dcbadge.vercel.app/api/server/G9XvcFQnn6)](https://discord.gg/G9XvcFQnn6)
+> [!IMPORTANT]
+> OpenGothic contains no original Gothic II assets. You must legally own
+> *Gothic II: Night of the Raven* and copy the game data from your installation.
 
-![Screenshoot](scr0.png)
+> [!NOTE]
+> The engine is developed by [Try](https://github.com/Try) and the OpenGothic
+> contributors. This fork maintains the iOS integration. Please support the
+> [upstream project](https://github.com/Try/OpenGothic).
 
-#### Work in progress
-[![Build status](https://img.shields.io/github/actions/workflow/status/Try/OpenGothic/build.yml?branch=master)](https://github.com/Try/OpenGothic/actions?query=build.yml?query=branch%3Amaster)
+![OpenGothic running on iOS with the touch controller](docs/ios/touch-controls.png)
 
+## Install on iPhone or iPad
 
-Development is focused on Gothic 2 and new features are not tested for compatibility with Gothic 1. While Gothic 1 is not officially supported, pull requests that fix Gothic 1 — and general — bugs are welcome.
+The maintained build uses MetalFX Temporal with automatic MetalFX Spatial and
+Lanczos fallbacks.
 
-The original game has been completely replicated; you can complete both the main quest and the addon. Check out the [bugtracker](https://github.com/Try/OpenGothic/issues) for a list of known issues.
-
-OpenGothic is designed to utilize features of modern graphics hardware and APIs, like mesh shaders or ray tracing. While mesh shaders are not mandatory, don't expect OpenGothic to run well on low-end or outdated graphics cards.
-
-#### Prerequisites
-
-Gothic 2: Night of the Raven is required as OpenGothic does not provide any built-in game assets or scripts.
-
-Supported systems are:
-* Windows (DX12, Vulkan)
-* Linux (Vulkan)
-* MacOS (Metal)
-* iOS / iPadOS (Metal)
-
-## How to play
-### Windows
-1. If not already done, install Gothic 2. OpenGothic comes with automatic path detection if your Gothic files are in a common path.
-    * "C:\Program Files (x86)\JoWooD\Gothic II"
-    * "C:\Gothic II"
-    * "C:\Program Files (x86)\Steam\steamapps\common\Gothic II"
-2. Download OpenGothic and extract it into a folder of your choice. Available options are:
-    * A [Pre-Release](https://github.com/Try/opengothic/releases/latest) (recommended)
-    * Alternatively a recent test build from [CI](https://github.com/Try/OpenGothic/actions?query=build.yml?query=branch%3Amaster)
-3. Run `Gothic2Notr.exe`.
-
-   If nothing happens, check `log.txt` and look for the line `invalid gothic path`. In this case OpenGothic fails to find your Gothic installation and you have to explicitly specify its location via `-g` parameter. Either you create a shortcut to `Gothic2Notr.exe` and change the target line in Properties to e.g.
-
-   `Gothic2Notr.exe -g "C:\Program Files (x86)\Steam\steamapps\common\Gothic II"`
-
-   or you can edit `Gothic2Notr.bat` and run this file instead.
-
-### Linux
-1. If not already done, install Gothic 2 via Wine/Proton or copy the game files from a Windows installation.
-2. Install OpenGothic using one of these options:
-   * **Debian/Ubuntu**: Download the `.deb` package from [Releases](https://github.com/Try/opengothic/releases/latest) and install with `sudo dpkg -i opengothic_*.deb`
-   * **Arch**: Install from [AUR](https://aur.archlinux.org/packages/opengothic)
-   * **Other distros**: Download the portable build from [CI](https://github.com/Try/OpenGothic/actions?query=build.yml?query=branch%3Amaster) or build manually
-
-3. Run `Gothic2Notr -g "~/PlayOnLinux's virtual drives/Gothic2_gog/drive_c/Gothic II"` (example path, use the path to your Gothic 2 installation instead)
-
-   For the portable build, you can edit `Gothic2Notr.sh` and change the line `exec "$DIR/Gothic2Notr" "$@"` to
-
-   `exec "$DIR/Gothic2Notr" "$@" -g "~/PlayOnLinux's virtual drives/Gothic2_gog/drive_c/Gothic II"`
-
-   to not have to enter the path manually every time. Then run `Gothic2Notr.sh` without arguments to start.
-
-### MacOS
-1. If not already done, install Gothic 2. Instructions on how to obtain the game files can be found [here](https://macsourceports.com/faq#getgamedata). OpenGothic comes with automatic path detection if your Gothic files are in `"~/Library/Application Support/OpenGothic"`.
-2. Download a build from [Mac Source Ports](https://macsourceports.com/game/gothic2) and follow the installation instructions given there.
-   Alternatively, recent test builds are available from [CI](https://github.com/Try/OpenGothic/actions?query=build.yml?query=branch%3Amaster) and can be extracted into a folder of your choice. You can compile a fresh build as well.
-3. Run `Gothic2Notr.sh`
-
-   If OpenGothic fails to find your Gothic 2 files, you have to explicitly specify its location via `-g` parameter.
-   Change the line `exec "$DIR/Gothic2Notr" "$@"` to reflect your Gothic 2 path e.g.
-
-   `exec "$DIR/Gothic2Notr" "$@" -g "~/PlayOnLinux's virtual drives/Gothic2_gog/drive_c/Gothic II"`
-
-### iOS / iPadOS
-1. Install [SideStore](https://sidestore.io) (recommended) or another client
-   compatible with AltStore sources.
-2. In **Sources → +**, add the OpenGothic iOS source:
+1. Set up [SideStore](https://sidestore.io) or another compatible sideloading
+   client.
+2. In SideStore open **Sources**, tap **+** and add:
 
    `https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json`
 
-3. Install **OpenGothic MetalFX Temporal** from the source. This is the single
-   maintained iOS performance build, with MetalFX fallbacks, 512 x 512 mobile
-   shadow maps and off-screen NPC animation optimization. The sideloading
-   client signs the otherwise unsigned IPA with your Apple account.
-4. Copy the **contents** of your legally owned Gothic II: Night of the Raven
-   installation into the app's `Documents` directory. `Data`, `_work` and
-   `system` must be directly inside `Documents`.
+3. Install **OpenGothic MetalFX Temporal** from the new source.
+4. In the iOS Files app open **On My iPhone/iPad → OpenGothic** and copy the
+   `Data/`, `_work/` and `system/` folders from your own Gothic II:
+   Night of the Raven installation.
+5. Launch OpenGothic.
 
-Installing an update with the same `opengothic.gothic2` bundle identifier
-preserves game data and saves. Do not uninstall the existing app first unless
-you have backed up its complete `Documents` directory. See the
-[complete iOS installation guide](docs/ios/INSTALL.md) for SideStore, local
-Xcode installation, game-data transfer and troubleshooting.
+The IPA is unsigned and must be signed by the sideloading client. Normal
+updates preserve the app's `Documents` directory, settings and saves. Do not
+uninstall an existing copy before backing up that directory.
 
----
-### Modifications
-Mods can be installed as usual. Provide the `modfile.ini` to OpenGothic via the `-game:` parameter to play. Example:
+- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-metalfx-temporal)
+- [Complete installation and local-build guide](docs/ios/INSTALL.md)
 
-`Gothic2Notr.exe -game:Karibik.ini`
+## Requirements
 
-#### What's working?
-Content mods (retexture/reworld/animations) that only rely on regular scripting and do not use memory hacking.
+- iPhone or iPad with a 64-bit Apple processor
+- iOS or iPadOS 15.0 or newer
+- A legally owned copy of *Gothic II: Night of the Raven*
+- Landscape orientation
 
-#### What's not?
-- Ikarus/LeGo
+A physical controller is optional.
 
-There are ongoing efforts to support parts of it to make at least some popular mods, like `Chronicles of Myrtana`, playable. Progress can be tracked in the corresponding [issue](https://github.com/Try/OpenGothic/issues/231). An explanantion how Ikarus works is given [here](https://github.com/Try/OpenGothic/discussions/396#discussioncomment-4823499).
-- Union (32 bit and Windows only, [not possible](https://github.com/Try/OpenGothic/issues/195))
-- DX11 Renderer - same as Union, but don't worry - OpenGothic has nice graphics out of the box
-- AST sdk
-- Ninja
+## Controls
 
-## Build Instructions
-### Linux
-Install dependencies:
-* Ubuntu 20.04/22.04 and their derived distros
-```bash
-source <(cat /etc/os-release | grep UBUNTU_CODENAME)
-# latest Vulkan SDK provided externally as Ubuntu packages are usually older
-wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-${UBUNTU_CODENAME}.list http://packages.lunarg.com/vulkan/lunarg-vulkan-${UBUNTU_CODENAME}.list
-sudo apt update
-sudo apt install vulkan-sdk
+The on-screen controller includes two full-size analog sticks, A/B/X/Y,
+shoulders, triggers, stick clicks, View/Menu and a four-direction D-pad. It
+hides automatically when a physical controller is connected.
 
-# distro-provided packages
-sudo apt install git cmake g++ glslang-tools libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
-```
+[![OpenGothic controller mapping](assets/controller/OpenGothic_Controller_Layout.svg)](assets/controller/OpenGothic_Controller_Layout.svg)
 
-* Arch
-```bash
-sudo pacman -S git cmake gcc glslang vulkan-devel alsa-lib libx11 libxcursor vulkan-icd-loader libglvnd
-```
+| Action | Xbox | PlayStation |
+|---|---|---|
+| Interact / use / confirm | A | Cross |
+| Melee special / back | B | Circle |
+| Jump / climb | X | Square |
+| Draw or sheathe weapon | Y | Triangle |
+| Move / turn | Left stick | Left stick |
+| Camera | Right stick | Right stick |
+| Aim bow / melee block | LT | L2 |
+| Draw melee / attack / shoot / cast | RT | R2 |
+| Walk / melee left attack | LB | L1 |
+| Look back / melee right attack | RB | R1 |
+| Sneak | L3 | L3 |
+| Target lock | R3 | R3 |
+| Items ring | D-pad up | D-pad up |
+| Weapons and Magic ring | D-pad down | D-pad down |
+| Quest log / previous target | D-pad left | D-pad left |
+| Map / next target | D-pad right | D-pad right |
+| Inventory | View | Share / Create |
+| Game menu | Menu | Options |
 
-* Fedora
-```bash
-sudo dnf install git cmake gcc-c++ glslang vulkan-loader-devel alsa-lib-devel libX11-devel libXcursor-devel vulkan-validation-layers-devel libglvnd-devel
-```
+When the main or in-game menu is open, **Y/Triangle** opens the native iOS
+device settings with the controller diagram, Off/30/60 FPS selection and UI
+language choice.
 
-* NixOS
-```bash
-# use the dev flake
-cd linux/flake   
-nix develop
-```
+The iOS interface supports automatic language selection plus English, German,
+Polish, Russian, French, Spanish, Italian and Czech. Game dialogue and subtitle
+availability still depends on the data copied by the user.
 
-#### Compilation
-```bash
-# 1st time build:
-git clone --recurse-submodules https://github.com/Try/OpenGothic.git
+See the [controller reference](docs/ios/CONTROLLER.md) for quick rings,
+contextual combat controls, configuration and the complete validation matrix.
+
+## iOS performance profile
+
+The recommended release enables:
+
+- MetalFX Temporal with automatic Spatial and Lanczos fallback;
+- two 512 × 512 mobile shadow maps;
+- reduced skeletal-pose work for distant, off-screen NPCs;
+- three frames in flight and direct Metal drawable rendering with a safe copy
+  fallback;
+- verified precompiled startup Metal libraries with runtime compilation
+  fallback.
+
+The aggressive dialog/cutscene NPC-pose mode remains disabled to preserve scene
+behavior. Other platforms retain their existing defaults.
+
+## Build from source
+
+Clone the maintained integration branch with all dependencies:
+
+```sh
+git clone --recurse-submodules --branch codex/ios-upstream-integration \
+  https://github.com/tryk016/OpenGothic.git
 cd OpenGothic
-cmake -B build -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
-make -C build -j $(nproc)
-
-# following builds:
-git pull --recurse-submodules
-make -C build -j $(nproc)
+./ios/build-ios.sh
+open build-ios/OpenGothic.xcodeproj
 ```
-Executables can be located at `OpenGothic/build/opengothic`.
 
-### MacOS
-```bash
-brew install glslang
-git clone --recurse-submodules https://github.com/Try/OpenGothic.git
-cd OpenGothic
-cmake -H. -Bbuild -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
-cmake --build ./build --target Gothic2Notr
-```
-Executables can be located at `OpenGothic/build/opengothic`.
+Select the `Gothic2Notr` target, choose your Apple development team and run on
+the connected device. Full signing, unsigned-build and data-copy instructions
+are in [docs/ios/INSTALL.md](docs/ios/INSTALL.md).
 
-## Video
-[![Video](https://img.youtube.com/vi/TpayMkyZ58Y/0.jpg)](https://www.youtube.com/watch?v=TpayMkyZ58Y)
+## Documentation
 
-## Available Graphic options
+- [iOS port overview](docs/ios/README.md)
+- [Installation and game-data setup](docs/ios/INSTALL.md)
+- [Controller implementation and validation](docs/ios/CONTROLLER.md)
+- [Startup Metal shader design](docs/ios/SHADER-STARTUP.md)
+- [License](LICENSE)
 
-The game menu in Gothic 2 is done by scripting. While the original graphics settings do not apply to current-gen graphics, the engine redefines meaning for some tweakables:
+Controller glyphs are
+[Xelu's Free Controller & Keyboard Prompts](https://thoseawesomeguys.com/prompts)
+by Nicolae “Xelu” Berbece (CC0). Attribution is included in
+[the asset license](assets/controller/LICENSE.md).
 
-* `Settings` -> `Extended configuration`
-  *  `Cloud Shadows` mapped to SSAO.
-  *  `Radial Fog` mapped to "Volumetric fog"
-  *  `Reflections` reused, for screen space reflections
-* `Settings` -> `Video settings`
-  *  Internal rendering resolution, for 3D, can be altered here. UI and text is always rendered at full resolution.
-* Application command line:
-  *  Ray tracing: setting affects only capable hardware, off by default for igpu's, add `-rt 1` to enable
-
-Rendering distance is not customizable.
-
-## Command line arguments
-| Argument(s)            | Description                                                      |
-| ---------------------- | -------                                                          |
-| `-g`                   | specify path containing Gothic game data                         |
-| `-game:<modfile.ini>`  | specify game modification manifest (GothicStarter compatibility) |
-| `-nomenu`              | skip main menu                                                   |
-| `-devmode`             | enable marvin-mode at start of the game                          |
-| `-w <worldname.zen>`   | startup world; newworld.zen is default                           |
-| `-save q`              | load the quick save on start                                     |
-| `-save <number>`       | load a specified save-game slot on start                         |
-| `-v -validation`       | enable validation layers for graphics api                        |
-| `-dx12`                | force DirectX 12 renderer instead of Vulkan (Windows only)       |
-| `-g1`                  | assume a Gothic 1 installation                                   |
-| `-g2c`                 | assume a Gothic 2 classic installation                           |
-| `-g2`                  | assume a Gothic 2 night of the raven installation                |
-| `-rt <boolean>`        | explicitly enable or disable ray-query                           |
-| `-gi <boolean>`        | explicitly enable or disable ray-traced global illumination      |
-| `-ms <boolean>`        | explicitly enable or disable meshlets                            |
-| `-aa <number>`         | enable anti-aliasing (number = 1-2, 2 = most expensive AA)       |
-| `-window`              | windowed debugging mode (not to be used for playing)             |
+For Windows, Linux, macOS, mods and general engine development, see
+[Try/OpenGothic](https://github.com/Try/OpenGothic).
