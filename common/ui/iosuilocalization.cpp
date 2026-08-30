@@ -3,6 +3,15 @@
 #include "game/constants.h"
 #include "gothic.h"
 
+#include <Tempest/Platform>
+
+#if defined(__IOS__)
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreFoundation/CFStringEncodingExt.h>
+#endif
+
+#include <cstring>
+
 namespace {
 
 using DeviceText = IosUiLocalization::DeviceSettingsText;
@@ -12,6 +21,71 @@ struct LanguageText {
   DeviceText device;
   PadText    pad;
   };
+
+constexpr char asciiLower(char value) {
+  return value>='A' && value<='Z' ? char(value-'A'+'a') : value;
+  }
+
+bool hasLanguageCode(std::string_view identifier, char c0, char c1) {
+  if(identifier.size()<2 || asciiLower(identifier[0])!=c0 ||
+     asciiLower(identifier[1])!=c1)
+    return false;
+  return identifier.size()==2 || identifier[2]=='-' || identifier[2]=='_';
+  }
+
+ScriptLang preferredSystemLanguage() {
+#if defined(__IOS__)
+  CFArrayRef languages = CFLocaleCopyPreferredLanguages();
+  if(languages==nullptr)
+    return ScriptLang::NONE;
+
+  ScriptLang result = ScriptLang::NONE;
+  const CFIndex count = CFArrayGetCount(languages);
+  for(CFIndex i=0; i<count && result==ScriptLang::NONE; ++i) {
+    CFTypeRef value = CFArrayGetValueAtIndex(languages,i);
+    if(value==nullptr || CFGetTypeID(value)!=CFStringGetTypeID())
+      continue;
+    char identifier[64] = {};
+    if(CFStringGetCString(static_cast<CFStringRef>(value),identifier,
+                          CFIndex(sizeof(identifier)),kCFStringEncodingUTF8))
+      result = IosUiLocalization::languageFromIdentifier(identifier);
+    }
+  CFRelease(languages);
+  return result;
+#else
+  return ScriptLang::NONE;
+#endif
+  }
+
+std::string asciiSafeFallback(std::string_view text) {
+  std::string result;
+  result.reserve(text.size());
+  for(const char ch:text) {
+    const auto value = static_cast<unsigned char>(ch);
+    result.push_back(value>=0x20 && value<=0x7e ? char(value) : '?');
+    }
+  return result;
+  }
+
+#if defined(__IOS__)
+CFStringEncoding textEncoding(ScriptLang language) {
+  switch(language) {
+    case ScriptLang::PL:
+    case ScriptLang::CZ:
+      return kCFStringEncodingWindowsLatin2;
+    case ScriptLang::RU:
+      return kCFStringEncodingWindowsCyrillic;
+    case ScriptLang::EN:
+    case ScriptLang::DE:
+    case ScriptLang::FR:
+    case ScriptLang::ES:
+    case ScriptLang::IT:
+    case ScriptLang::NONE:
+    default:
+      return kCFStringEncodingWindowsLatin1;
+    }
+  }
+#endif
 
 // GthFont maps one byte to one glyph in the active game codepage. Keep these
 // literals out of UTF-8: RU is CP1251, PL/CZ are CP1250, and the western
@@ -241,8 +315,7 @@ const LanguageText& textFor(ScriptLang language) {
 
 }
 
-ScriptLang IosUiLocalization::currentLanguage() {
-  const int value = Gothic::settingsGetI("GAME","language");
+bool IosUiLocalization::isSupportedLanguage(int value) {
   switch(ScriptLang(value)) {
     case ScriptLang::EN:
     case ScriptLang::DE:
@@ -252,11 +325,100 @@ ScriptLang IosUiLocalization::currentLanguage() {
     case ScriptLang::ES:
     case ScriptLang::IT:
     case ScriptLang::CZ:
-      return ScriptLang(value);
+      return true;
     case ScriptLang::NONE:
     default:
-      return ScriptLang::EN;
+      return false;
     }
+  }
+
+ScriptLang IosUiLocalization::languageFromIdentifier(std::string_view identifier) {
+  if(hasLanguageCode(identifier,'e','n')) return ScriptLang::EN;
+  if(hasLanguageCode(identifier,'d','e')) return ScriptLang::DE;
+  if(hasLanguageCode(identifier,'p','l')) return ScriptLang::PL;
+  if(hasLanguageCode(identifier,'r','u')) return ScriptLang::RU;
+  if(hasLanguageCode(identifier,'f','r')) return ScriptLang::FR;
+  if(hasLanguageCode(identifier,'e','s')) return ScriptLang::ES;
+  if(hasLanguageCode(identifier,'i','t')) return ScriptLang::IT;
+  if(hasLanguageCode(identifier,'c','s') || hasLanguageCode(identifier,'c','z'))
+    return ScriptLang::CZ;
+  return ScriptLang::NONE;
+  }
+
+ScriptLang IosUiLocalization::resolveLanguage(int gameLanguage, int uiLanguage,
+                                              ScriptLang preferredLanguage) {
+  if(isSupportedLanguage(uiLanguage))
+    return ScriptLang(uiLanguage);
+  if(isSupportedLanguage(gameLanguage))
+    return ScriptLang(gameLanguage);
+  if(gameLanguage==int(ScriptLang::NONE) &&
+     isSupportedLanguage(int(preferredLanguage)))
+    return preferredLanguage;
+  return ScriptLang::EN;
+  }
+
+const char* IosUiLocalization::languageCode(ScriptLang language) {
+  switch(language) {
+    case ScriptLang::EN: return "EN";
+    case ScriptLang::DE: return "DE";
+    case ScriptLang::PL: return "PL";
+    case ScriptLang::RU: return "RU";
+    case ScriptLang::FR: return "FR";
+    case ScriptLang::ES: return "ES";
+    case ScriptLang::IT: return "IT";
+    case ScriptLang::CZ: return "CZ";
+    case ScriptLang::NONE:
+    default:             return "EN";
+    }
+  }
+
+std::string IosUiLocalization::uiTextUtf8(ScriptLang language,
+                                           std::string_view text) {
+  if(text.empty())
+    return {};
+#if defined(__IOS__)
+  CFStringRef value = CFStringCreateWithBytes(
+      kCFAllocatorDefault,reinterpret_cast<const UInt8*>(text.data()),
+      CFIndex(text.size()),textEncoding(language),false);
+  if(value==nullptr)
+    return asciiSafeFallback(text);
+
+  const CFIndex length = CFStringGetLength(value);
+  const CFIndex capacity = CFStringGetMaximumSizeForEncoding(
+      length,kCFStringEncodingUTF8)+1;
+  std::string result(size_t(std::max<CFIndex>(1,capacity)),'\0');
+  const bool converted = CFStringGetCString(value,result.data(),
+                                             capacity,kCFStringEncodingUTF8);
+  CFRelease(value);
+  if(!converted)
+    return asciiSafeFallback(text);
+  result.resize(std::strlen(result.c_str()));
+  return result;
+#else
+  return asciiSafeFallback(text);
+#endif
+  }
+
+int IosUiLocalization::languageSelection() {
+  const int value = Gothic::settingsGetI("ENGINE","iOSUiLanguage");
+  return value==AutomaticLanguage || isSupportedLanguage(value) ?
+         value : AutomaticLanguage;
+  }
+
+void IosUiLocalization::setLanguageSelection(int value) {
+  if(value!=AutomaticLanguage && !isSupportedLanguage(value))
+    value = AutomaticLanguage;
+  Gothic::settingsSetI("ENGINE","iOSUiLanguage",value);
+  Gothic::flushSettings();
+  }
+
+ScriptLang IosUiLocalization::currentLanguage() {
+  const int gameLanguage = Gothic::settingsGetI("GAME","language");
+  const int uiLanguage   = languageSelection();
+  if(uiLanguage!=AutomaticLanguage || gameLanguage!=int(ScriptLang::NONE))
+    return resolveLanguage(gameLanguage,uiLanguage,ScriptLang::NONE);
+  static const ScriptLang preferred = preferredSystemLanguage();
+  return resolveLanguage(gameLanguage,uiLanguage,preferred);
   }
 
 const IosUiLocalization::DeviceSettingsText&

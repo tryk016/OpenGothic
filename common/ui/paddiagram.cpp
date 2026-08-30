@@ -3,6 +3,7 @@
 #include <Tempest/Painter>
 #include <Tempest/Brush>
 #include <Tempest/Color>
+#include <Tempest/Rect>
 #include <Tempest/Texture2d>
 
 #include <algorithm>
@@ -17,9 +18,11 @@
 #include <utility>
 
 #include "game/constants.h"
+#include "ui/iosuifont.h"
 #include "ui/iosuilocalization.h"
-#include "utils/gthfont.h"
 #include "ui/padglyph.h"
+#include "utils/gthfont.h"
+#include "utils/safearea.h"
 
 using namespace Tempest;
 
@@ -44,14 +47,16 @@ struct WrappedLabel {
     }
   };
 
-// Split only on ASCII spaces: the labels use the game's one-byte CP1250,
-// CP1251 or CP1252 encoding, so byte-wise word boundaries are safe while UTF-8 rules
-// would not be. The best balanced split is used and the result never exceeds
-// two lines.
-WrappedLabel wrapLabel(const GthFont& fnt, const char* text, int maxWidth) {
-  const std::string_view full(text);
-  if(fnt.textSize(full).w<=maxWidth)
-    return {std::string(full),{}};
+bool isTextBoundary(const IosUiFont& fnt, std::string_view text, size_t index) {
+  return !fnt.preparedTextIsUtf8() || index>=text.size() ||
+         (static_cast<unsigned char>(text[index])&0xc0u)!=0x80u;
+  }
+
+// Catalog text is converted once before wrapping. Spaces remain ASCII and the
+// last-resort split observes UTF-8 code-point boundaries.
+WrappedLabel wrapLabel(const IosUiFont& fnt, std::string full, int maxWidth) {
+  if(fnt.textSizePrepared(full).w<=maxWidth)
+    return {std::move(full),{}};
 
   WrappedLabel best = {std::string(full),{}};
   int  bestWidth = std::numeric_limits<int>::max();
@@ -70,8 +75,8 @@ WrappedLabel wrapLabel(const GthFont& fnt, const char* text, int maxWidth) {
 
     std::string first(full.substr(0,leftEnd));
     std::string second(full.substr(rightBeg));
-    const int w1 = fnt.textSize(first).w;
-    const int w2 = fnt.textSize(second).w;
+    const int w1 = fnt.textSizePrepared(first).w;
+    const int w2 = fnt.textSizePrepared(second).w;
     const int widest = std::max(w1,w2);
     const bool fits = widest<=maxWidth;
     if((fits && !bestFits) || (fits==bestFits && widest<bestWidth)) {
@@ -82,10 +87,12 @@ WrappedLabel wrapLabel(const GthFont& fnt, const char* text, int maxWidth) {
     }
 
   // A German compound (or a very narrow panel) may have no usable word
-  // boundary. The game strings are single-byte encoded, so a last-resort
-  // character split is safe and still keeps the complete label visible.
+  // boundary. A last-resort code-point split still keeps the complete label
+  // visible without cutting a multibyte UTF-8 sequence.
   if(!bestFits) {
     for(size_t split=1; split<full.size(); ++split) {
+      if(!isTextBoundary(fnt,full,split))
+        continue;
       size_t leftEnd = split;
       while(leftEnd>0 && full[leftEnd-1]==' ')
         --leftEnd;
@@ -97,8 +104,8 @@ WrappedLabel wrapLabel(const GthFont& fnt, const char* text, int maxWidth) {
 
       std::string first(full.substr(0,leftEnd));
       std::string second(full.substr(rightBeg));
-      const int widest = std::max(fnt.textSize(first).w,
-                                  fnt.textSize(second).w);
+      const int widest = std::max(fnt.textSizePrepared(first).w,
+                                  fnt.textSizePrepared(second).w);
       const bool fits = widest<=maxWidth;
       if((fits && !bestFits) || (fits==bestFits && widest<bestWidth)) {
         best      = {std::move(first),std::move(second)};
@@ -110,10 +117,11 @@ WrappedLabel wrapLabel(const GthFont& fnt, const char* text, int maxWidth) {
   return best;
   }
 
-int minimumTwoLineWidth(const GthFont& fnt, const char* text) {
-  const std::string_view full(text);
-  int best = fnt.textSize(full).w;
+int minimumTwoLineWidth(const IosUiFont& fnt, std::string_view full) {
+  int best = fnt.textSizePrepared(full).w;
   for(size_t split=1; split<full.size(); ++split) {
+    if(!isTextBoundary(fnt,full,split))
+      continue;
     size_t leftEnd = split;
     while(leftEnd>0 && full[leftEnd-1]==' ')
       --leftEnd;
@@ -122,8 +130,9 @@ int minimumTwoLineWidth(const GthFont& fnt, const char* text) {
       ++rightBeg;
     if(leftEnd==0 || rightBeg==full.size())
       continue;
-    best = std::min(best,std::max(fnt.textSize(full.substr(0,leftEnd)).w,
-                                 fnt.textSize(full.substr(rightBeg)).w));
+    best = std::min(best,
+                    std::max(fnt.textSizePrepared(full.substr(0,leftEnd)).w,
+                             fnt.textSizePrepared(full.substr(rightBeg)).w));
     }
   return best;
   }
@@ -140,13 +149,29 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
     return;
 
   const auto& L = IosUiLocalization::padDiagram(language);
+  const IosUiFont uiFont(p.font(),fnt,language);
+
+  const SafeArea::Insets in = SafeArea::insets();
+  const int safeLeft   = std::clamp(in.left,0,w);
+  const int safeTop    = std::clamp(in.top,0,h);
+  const int safeRight  = std::clamp(w-std::max(0,in.right),safeLeft,w);
+  const int safeBottom = std::clamp(h-std::max(0,in.bottom),safeTop,h);
+  const int safeW      = safeRight-safeLeft;
+  const int safeH      = safeBottom-safeTop;
 
   // Dim the whole page: the parchment menu background is too busy behind the
   // thin white line-art.
   p.setBrush(Color(0.f,0.f,0.f,0.62f));
   p.drawRect(0,0,w,h);
+  if(safeW<=0 || safeH<=0)
+    return;
 
-  const int   th     = fnt.pixelSize();
+  // All actual diagram geometry is both computed from and clipped to the safe
+  // content rectangle. Insets are zero off iOS, preserving the old layout.
+  p.pushState();
+  p.setScissor(safeLeft,safeTop,safeW,safeH);
+
+  const int   th     = uiFont.pixelSize();
   const int   s      = std::max(18, int(26.f*scale));       // glyph side
   const int   gap    = int(10.f*scale);
   const int   tokGap = int(6.f*scale);
@@ -156,24 +181,27 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
   const Color ink    = Color(0.86f,0.78f,0.60f,0.65f);
 
   // Title.
-  const auto ts = fnt.textSize(L.title);
-  fnt.drawText(p, (w-ts.w)/2, margin+ts.h, L.title);
+  const auto ts = uiFont.textSize(L.title);
+  uiFont.drawText(p,safeLeft+(safeW-ts.w)/2,safeTop+margin+ts.h,L.title);
 
   // Vertical bands: title / View+Menu callouts / diagram.
-  const int topBandY = margin + ts.h + int(10.f*scale);
+  const int topBandY = safeTop+margin+ts.h+int(10.f*scale);
   const int topBlockH= std::max(s,2*th+textGap);
   const int imgTop   = topBandY + topBlockH + int(14.f*scale);
 
   // The menu draws its build string after this page. Reserve its real glyph
   // box explicitly so the diagram can never overlap it.
-  const int versionTop  = reserveVersionLine ? h-int(25.f*scale)-th : h;
+  const int versionTop  = reserveVersionLine ?
+                          safeBottom-int(25.f*scale)-th : safeBottom;
   const int imgBot      = std::max(imgTop+1,
-                                  std::min(h-margin,versionTop-gap));
+                                  std::min(safeBottom-margin,versionTop-gap));
 
   auto widestTwoLine = [&](std::initializer_list<const char*> labels) {
     int ret = 0;
-    for(const char* label:labels)
-      ret = std::max(ret,minimumTwoLineWidth(fnt,label));
+    for(const char* label:labels) {
+      const std::string prepared = uiFont.prepareText(label);
+      ret = std::max(ret,minimumTwoLineWidth(uiFont,prepared));
+      }
     return ret;
     };
   const int leftW = widestTwoLine({L.ltAction,L.lbAction,L.move,L.sneak,
@@ -183,18 +211,18 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
                                     L.jump,L.action,L.camera,L.targetLock});
   const int requiredColW = margin+2*gap+s+
                            std::max(leftW,rightW);
-  const int maxColW = std::max(1,(w-4*s)/2);
-  const int colW = std::clamp(std::max(int(float(w)*0.30f),requiredColW),
+  const int maxColW = std::max(1,(safeW-4*s)/2);
+  const int colW = std::clamp(std::max(int(float(safeW)*0.30f),requiredColW),
                               1,maxColW);
 
   // Fit the line-art into the middle band, keeping aspect.
-  const int   availW = w - 2*colW;
+  const int   availW = std::max(1,safeW-2*colW);
   const int   availH = std::max(1, imgBot-imgTop);
   const float ratio  = std::min(float(availW)/float(img->w()),
                                 float(availH)/float(img->h()));
   const int   dw     = int(float(img->w())*ratio);
   const int   dh     = int(float(img->h())*ratio);
-  const int   imgX   = colW   + (availW-dw)/2;
+  const int   imgX   = safeLeft+colW+(availW-dw)/2;
   const int   imgY   = imgTop + (availH-dh)/2;
 
   p.setBrush(Brush(*img, Color(1.f,1.f,1.f,0.92f)));
@@ -259,13 +287,15 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
         int gx = imgX-gap-s;
         if(rows[i].ng==2)
           gx -= s+tokGap/2;
-        maxWidth = gx-gap-margin;
+        maxWidth = gx-gap-(safeLeft+margin);
         }
       else {
         const int textX = imgX+dw+gap+s+gap;
-        maxWidth = w-margin-textX;
+        maxWidth = safeRight-margin-textX;
         }
-      labels[i] = wrapLabel(fnt,rows[i].txt,std::max(1,maxWidth));
+      labels[i] = wrapLabel(uiFont,
+                            uiFont.prepareText(rows[i].txt),
+                            std::max(1,maxWidth));
       }
     return labels;
     };
@@ -303,8 +333,8 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
   auto drawLabel = [&](const WrappedLabel& label, int edge, int cy,
                        bool alignRight) {
     auto line = [&](const std::string& text, int baseline) {
-      const int x = alignRight ? edge-fnt.textSize(text).w : edge;
-      fnt.drawText(p,x,baseline,text.c_str());
+      const int x = alignRight ? edge-uiFont.textSizePrepared(text).w : edge;
+      uiFont.drawTextPrepared(p,x,baseline,text);
       };
     if(label.line2.empty()) {
       line(label.line1,cy+th/2);
@@ -353,8 +383,10 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
     const int gx  = axp - s/2;
     const int gy  = topBandY+(topBlockH-s)/2;
     const int edge= textOnLeft ? gx-gap : gx+s+gap;
-    const int maxW= textOnLeft ? edge-margin : w-margin-edge;
-    const auto label = wrapLabel(fnt,txt,std::max(1,maxW));
+    const int maxW= textOnLeft ? edge-(safeLeft+margin) :
+                                 safeRight-margin-edge;
+    const auto label = wrapLabel(uiFont,uiFont.prepareText(txt),
+                                 std::max(1,maxW));
     glyph(b,gx,gy);
     drawLabel(label,edge,topBandY+topBlockH/2,textOnLeft);
     vline(axp, topBandY+topBlockH+2, ayp);
@@ -362,4 +394,5 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
     };
   topLbl(PadGlyph::View, L.inventory, true,  0.433f,0.438f);
   topLbl(PadGlyph::Menu, L.gameMenu, false, 0.571f,0.433f);
+  p.popState();
   }

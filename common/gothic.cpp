@@ -197,6 +197,7 @@ Gothic::Gothic() {
   // Default to the device-friendly 30 FPS, while DeviceSettings permits 0/60.
   defaults->set("ENGINE",       "zMaxFps",           30);
   defaults->set("ENGINE",       "shadowResolution", 1024);
+  defaults->set("ENGINE",       "iOSUiLanguage",     -1);
 #endif
 
   defaults->set("VIDEO", "zVidBrightness", 0.5f);
