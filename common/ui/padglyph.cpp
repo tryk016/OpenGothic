@@ -114,10 +114,12 @@ void PadGlyph::draw(Painter& p, const GthFont& fnt, Btn b, int x, int y, int s, 
     case LStick: fillDisc(p,cx,cy,r,Color(0.40f,0.40f,0.46f,0.55f*a)); centerLabel(p,fnt,cx,cy,"L"); break;
     case RStick: fillDisc(p,cx,cy,r,Color(0.40f,0.40f,0.46f,0.55f*a)); centerLabel(p,fnt,cx,cy,"R"); break;
 
-    case DPadUp:    fillTri(p, cx, cy-r, cx-r*0.8f, cy+r*0.4f, cx+r*0.8f, cy+r*0.4f, ink); break;
+    // Keep every arrow clockwise in screen coordinates. Tempest's UI pipeline
+    // culls the opposite winding, which previously made Up and Right invisible.
+    case DPadUp:    fillTri(p, cx, cy-r, cx+r*0.8f, cy+r*0.4f, cx-r*0.8f, cy+r*0.4f, ink); break;
     case DPadDown:  fillTri(p, cx, cy+r, cx-r*0.8f, cy-r*0.4f, cx+r*0.8f, cy-r*0.4f, ink); break;
     case DPadLeft:  fillTri(p, cx-r, cy, cx+r*0.4f, cy-r*0.8f, cx+r*0.4f, cy+r*0.8f, ink); break;
-    case DPadRight: fillTri(p, cx+r, cy, cx-r*0.4f, cy-r*0.8f, cx-r*0.4f, cy+r*0.8f, ink); break;
+    case DPadRight: fillTri(p, cx+r, cy, cx-r*0.4f, cy+r*0.8f, cx-r*0.4f, cy-r*0.8f, ink); break;
 
     case Menu: {   // three stacked lines
       p.setBrush(ink);
@@ -183,7 +185,7 @@ void PadGlyph::drawTouch(Painter& p, const GthFont& fnt, Btn b,
       }
 
     case DPadUp:
-      outlineTri(p,cx,cy-r,cx-r*0.75f,cy+r*0.4f,cx+r*0.75f,cy+r*0.4f,fill,ink);
+      outlineTri(p,cx,cy-r,cx+r*0.75f,cy+r*0.4f,cx-r*0.75f,cy+r*0.4f,fill,ink);
       break;
     case DPadDown:
       outlineTri(p,cx,cy+r,cx-r*0.75f,cy-r*0.4f,cx+r*0.75f,cy-r*0.4f,fill,ink);
@@ -192,7 +194,7 @@ void PadGlyph::drawTouch(Painter& p, const GthFont& fnt, Btn b,
       outlineTri(p,cx-r,cy,cx+r*0.4f,cy-r*0.75f,cx+r*0.4f,cy+r*0.75f,fill,ink);
       break;
     case DPadRight:
-      outlineTri(p,cx+r,cy,cx-r*0.4f,cy-r*0.75f,cx-r*0.4f,cy+r*0.75f,fill,ink);
+      outlineTri(p,cx+r,cy,cx-r*0.4f,cy+r*0.75f,cx-r*0.4f,cy-r*0.75f,fill,ink);
       break;
 
     case Menu: {
