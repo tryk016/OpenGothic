@@ -89,6 +89,9 @@ std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const CommandLine& g) {
   options.swapchainBufferCount = 3;
 #endif
   options.shaderModuleCacheSize = OPENGOTHIC_IOS_METAL_SHADER_CACHE_SIZE;
+#if defined(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
+  options.swapchainRenderMode = Tempest::MetalApi::SwapchainRenderMode::Direct;
+#endif
   return std::make_unique<Tempest::MetalApi>(flg,options);
 #else
   return std::make_unique<Tempest::MetalApi>(flg);

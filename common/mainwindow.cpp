@@ -1235,8 +1235,8 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
   constexpr const char* gpuExperiment = "world_far_plane_60000";
   constexpr uint32_t worldFarPlane = 60000u;
   constexpr uint32_t drawDistancePercent = 60u;
-#elif defined(OPENGOTHIC_GPU_EXPERIMENT_DIRECT_DRAWABLE_LAZY_SSAO)
-  constexpr const char* gpuExperiment = "direct_drawable_v2_lazy_ssao";
+#elif defined(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
+  constexpr const char* gpuExperiment = "direct_drawable";
   constexpr uint32_t worldFarPlane = 100000u;
   constexpr uint32_t drawDistancePercent = 100u;
 #else
@@ -1244,7 +1244,7 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
   constexpr uint32_t worldFarPlane = 100000u;
   constexpr uint32_t drawDistancePercent = 100u;
 #endif
-#if defined(OPENGOTHIC_GPU_EXPERIMENT_DIRECT_DRAWABLE_LAZY_SSAO)
+#if defined(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
   constexpr int directDrawable = 1;
 #else
   constexpr int directDrawable = 0;
