@@ -123,7 +123,7 @@ elseif(IOS)
       OPENGOTHIC_IOS_INCREASED_MEMORY_REQUESTED=1)
   endif()
   if(OPENGOTHIC_PERF_DIAGNOSTICS)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_PERF_DIAGNOSTICS=1)
   endif()
   if(OPENGOTHIC_NPC_ANIMATION_CULLING)
@@ -138,9 +138,7 @@ elseif(IOS)
       OPENGOTHIC_NPC_DIALOG_CULLING=1)
   endif()
   if(OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT=1)
-    target_compile_definitions(Gothic2Notr PRIVATE
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT=1)
   endif()
   target_compile_definitions(Gothic2Notr PRIVATE
@@ -164,14 +162,14 @@ elseif(IOS)
       OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE=1)
   endif()
   if(OPENGOTHIC_METALFX_SPATIAL)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_METALFX_SPATIAL=1)
   endif()
   if(OPENGOTHIC_METALFX_TEMPORAL)
     if(NOT OPENGOTHIC_METALFX_SPATIAL)
       message(FATAL_ERROR "OPENGOTHIC_METALFX_TEMPORAL requires OPENGOTHIC_METALFX_SPATIAL for its fallback path")
     endif()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_METALFX_TEMPORAL=1)
   endif()
   # App icon: Xcode's actool compiles this asset catalog on the CI runner and
