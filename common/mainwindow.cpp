@@ -228,7 +228,7 @@ MainWindow::~MainWindow() {
 
 float MainWindow::uiScale() const {
   const float base = SystemApi::uiScale(hwnd());
-#if defined(__MOBILE_PLATFORM__)
+#if defined(__IOS__)
   // High-DPI phones/tablets render the UI at native pixels, but SystemApi
   // reports scale 1.0 on iOS, leaving the fixed-size Gothic UI tiny. Scale up
   // roughly with the framebuffer size so menu/dialogue/subtitle text stays
