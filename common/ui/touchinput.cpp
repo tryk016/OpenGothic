@@ -319,6 +319,12 @@ void TouchInput::tick() {
   }
 
 void TouchInput::paintEvent(PaintEvent& e) {
+#if defined(__IOS__)
+  // DeviceSettings is a modal iOS layer. Do not leave the menu pad visible
+  // underneath it; the settings page owns the complete controller diagram.
+  if(owner.deviceSettingsOpen())
+    return;
+#endif
   if(owner.padRingOpen()) {
     // TouchInput is the last widget in MainWindow's stack, so this keeps the
     // radial above inventory/menu widgets for both touch and physical pads.

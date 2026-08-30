@@ -143,7 +143,8 @@ bool PadDiagram::available() {
   }
 
 void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
-                      ScriptLang language, bool reserveVersionLine) {
+                      ScriptLang language, bool reserveVersionLine,
+                      int contentRight) {
   const Texture2d* img = PadGlyph::diagram();
   if(img==nullptr)
     return;
@@ -154,14 +155,16 @@ void PadDiagram::draw(Painter& p, const GthFont& fnt, int w, int h, float scale,
   const SafeArea::Insets in = SafeArea::insets();
   const int safeLeft   = std::clamp(in.left,0,w);
   const int safeTop    = std::clamp(in.top,0,h);
-  const int safeRight  = std::clamp(w-std::max(0,in.right),safeLeft,w);
+  int safeRight  = std::clamp(w-std::max(0,in.right),safeLeft,w);
+  if(contentRight>safeLeft)
+    safeRight = std::clamp(contentRight,safeLeft,safeRight);
   const int safeBottom = std::clamp(h-std::max(0,in.bottom),safeTop,h);
   const int safeW      = safeRight-safeLeft;
   const int safeH      = safeBottom-safeTop;
 
   // Dim the whole page: the parchment menu background is too busy behind the
   // thin white line-art.
-  p.setBrush(Color(0.f,0.f,0.f,0.62f));
+  p.setBrush(Color(0.f,0.f,0.f,0.88f));
   p.drawRect(0,0,w,h);
   if(safeW<=0 || safeH<=0)
     return;

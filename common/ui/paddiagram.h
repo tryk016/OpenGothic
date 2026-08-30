@@ -15,7 +15,9 @@ namespace PadDiagram {
   bool available();
 
   // Paint the whole page into a w x h widget. The labels mirror the actual
-  // bindings in GamepadInput::tickWorld - keep both in sync.
+  // bindings in GamepadInput::tickWorld - keep both in sync. contentRight
+  // optionally reserves a right-hand column for a sibling settings panel.
   void draw(Tempest::Painter& p, const GthFont& fnt, int w, int h, float scale,
-            ScriptLang language, bool reserveVersionLine);
+            ScriptLang language, bool reserveVersionLine,
+            int contentRight=0);
   }
