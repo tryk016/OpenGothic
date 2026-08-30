@@ -6,6 +6,7 @@
 #include <Tempest/Dialog>
 
 #include <algorithm>
+#include <string>
 #include <string_view>
 
 #include "utils/string_frm.h"
@@ -13,7 +14,9 @@
 #include "world/world.h"
 #include "ui/menuroot.h"
 #include "ui/padglyph.h"
+#include "ui/iosuifont.h"
 #include "ui/iosuilocalization.h"
+#include "utils/safearea.h"
 #include "utils/gthfont.h"
 #include "utils/fileutil.h"
 #include "utils/keycodec.h"
@@ -401,11 +404,44 @@ void GameMenu::paintEvent(PaintEvent &e) {
   // It stays in the safe top-left corner; Y opens the same screen on a pad.
   {
     auto& fnt = Resources::font(scale);
-    const int side = std::max(18,int(24.f*scale));
-    const auto& text = IosUiLocalization::deviceSettings(
-                         IosUiLocalization::currentLanguage());
-    PadGlyph::drawLabelled(p,fnt,PadGlyph::Y,int(16.f*scale),int(16.f*scale),side,
-                           text.title,0.85f);
+    const ScriptLang language = IosUiLocalization::currentLanguage();
+    const IosUiFont uiFont(p.font(),fnt,language);
+    const auto& text = IosUiLocalization::deviceSettings(language);
+    const SafeArea::Insets in = SafeArea::insets();
+    const int screenSafeLeft   = std::clamp(in.left,0,owner.w());
+    const int screenSafeTop    = std::clamp(in.top,0,owner.h());
+    const int screenSafeRight  = std::clamp(owner.w()-std::max(0,in.right),
+                                            screenSafeLeft,owner.w());
+    const int screenSafeBottom = std::clamp(owner.h()-std::max(0,in.bottom),
+                                            screenSafeTop,owner.h());
+    const int safeLeft   = std::clamp(screenSafeLeft-x(),0,w());
+    const int safeTop    = std::clamp(screenSafeTop-y(),0,h());
+    const int safeRight  = std::clamp(screenSafeRight-x(),safeLeft,w());
+    const int safeBottom = std::clamp(screenSafeBottom-y(),safeTop,h());
+    const int safeW      = safeRight-safeLeft;
+    const int safeH      = safeBottom-safeTop;
+    if(safeW>0 && safeH>0) {
+      const int margin = std::min(std::max(8,int(16.f*scale)),
+                                  std::max(0,std::min(safeW,safeH)/4));
+      const int side   = std::min(std::max(18,int(24.f*scale)),
+                                  std::max(1,safeH-2*margin));
+      const int gap    = std::max(4,int(6.f*scale));
+      const int glyphX = safeLeft+margin;
+      const int glyphY = safeTop+margin;
+      const std::string label = uiFont.prepareText(text.title);
+      const auto labelSize = uiFont.textSizePrepared(label);
+      const int preferredX = glyphX+side+gap;
+      const int latestX = std::max(safeLeft+margin,
+                                   safeRight-margin-labelSize.w);
+      const int labelX = std::clamp(preferredX,safeLeft+margin,latestX);
+      const int labelBaseline = glyphY+(side+labelSize.h)/2;
+
+      p.pushState();
+      p.setScissor(safeLeft,safeTop,safeW,safeH);
+      PadGlyph::draw(p,fnt,PadGlyph::Y,glyphX,glyphY,side,0.85f);
+      uiFont.drawTextPrepared(p,labelX,labelBaseline,label,0.85f);
+      p.popState();
+      }
     }
 #endif
 

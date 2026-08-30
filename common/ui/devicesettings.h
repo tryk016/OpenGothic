@@ -2,6 +2,9 @@
 
 #include <Tempest/Widget>
 
+#include <array>
+#include <cstdint>
+
 class MainWindow;
 
 // Native, platform-owned settings layer.  It deliberately has no connection
@@ -22,11 +25,40 @@ class DeviceSettings final : public Tempest::Widget {
     void paintEvent(Tempest::PaintEvent& event) override;
 
   private:
+    enum class Row : uint8_t {
+      FrameRate,
+      Language,
+      };
+
+    struct Box {
+      int x=0, y=0, w=0, h=0;
+      bool contains(int px, int py) const;
+      };
+
+    // One geometry object is shared by painting and touch hit-testing.
+    struct Layout {
+      Box               panel;
+      Box               frameRateRow;
+      std::array<Box,3> frameRateButtons;
+      Box               languageRow;
+      Box               languageButton;
+      int               gap=0;
+      int               titleBaseline=0;
+      int               frameRateBaseline=0;
+      int               controlledBaseline=0;
+      int               languageBaseline=0;
+      int               footerBaseline=0;
+      };
+
+    Layout        layout() const;
     bool          isFrameRateLocked() const;
     int           frameRate() const;
     void          setFrameRate(int value);
     void          cycleFrameRate(int direction);
+    void          cycleLanguage(int direction);
+    void          cycleActiveRow(int direction);
 
     MainWindow& owner;
     bool        active = false;
+    Row         selectedRow = Row::FrameRate;
   };
