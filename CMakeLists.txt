@@ -69,8 +69,8 @@ elseif(IOS)
     message(FATAL_ERROR
       "OPENGOTHIC_IOS_METAL_SHADER_CACHE_SIZE must be a non-negative decimal integer without leading zeroes")
   endif()
-  option(OPENGOTHIC_GPU_EXPERIMENT_DIRECT_DRAWABLE_LAZY_SSAO
-         "Render directly into CAMetalDrawable and allocate SSAO buffers on demand" OFF)
+  option(OPENGOTHIC_IOS_DIRECT_DRAWABLE
+         "Render directly into CAMetalDrawable on iOS, with automatic copy fallback" OFF)
   option(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000
          "Limit the iOS world camera far plane to 60000 Gothic units" OFF)
   option(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE
@@ -145,9 +145,11 @@ elseif(IOS)
   endif()
   target_compile_definitions(Gothic2Notr PRIVATE
     OPENGOTHIC_IOS_METAL_SHADER_CACHE_SIZE=${OPENGOTHIC_IOS_METAL_SHADER_CACHE_SIZE})
-  if(OPENGOTHIC_GPU_EXPERIMENT_DIRECT_DRAWABLE_LAZY_SSAO)
+  if(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
-      OPENGOTHIC_GPU_EXPERIMENT_DIRECT_DRAWABLE_LAZY_SSAO=1)
+      OPENGOTHIC_IOS_DIRECT_DRAWABLE=1)
+    target_compile_definitions(Gothic2Notr PRIVATE
+      OPENGOTHIC_IOS_DIRECT_DRAWABLE=1)
   endif()
   if(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000 AND
      OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
@@ -276,9 +278,6 @@ if(IOS AND OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS AND
    OPENGOTHIC_IOS_STARTUP_METALLIB)
   target_compile_definitions(Tempest PRIVATE
     TEMPEST_METAL_STARTUP_LIBRARY="OpenGothicStartup.metallib")
-endif()
-if(IOS AND OPENGOTHIC_GPU_EXPERIMENT_DIRECT_DRAWABLE_LAZY_SSAO)
-  target_compile_definitions(Tempest PRIVATE TEMPEST_METAL_DIRECT_DRAWABLE=1)
 endif()
 include_directories(lib/Tempest/Engine/include)
 target_link_libraries(${PROJECT_NAME} Tempest)
