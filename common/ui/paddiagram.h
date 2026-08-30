@@ -8,8 +8,8 @@ enum class ScriptLang : int32_t;
 
 // Full-screen controller-layout help page: the bundled Xelu pad line-art with
 // leader lines, button glyphs and localized labels for this fork's gamepad
-// mapping. GameMenu shows it instead of the keyboard key list on the controls
-// page when the diagram art is bundled (iOS).
+// mapping. The native iOS device-settings overlay shows it without replacing
+// the MENU.DAT controls page.
 namespace PadDiagram {
   // True when the bundled pad line-art is present (iOS app bundle only).
   bool available();
