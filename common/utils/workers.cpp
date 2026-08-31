@@ -4,6 +4,10 @@
 #include <Tempest/Platform>
 #include <Tempest/Log>
 
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+#include <chrono>
+#endif
+
 #if defined(__WINDOWS__)
 #include <windows.h>
 #include <processthreadsapi.h>
@@ -104,6 +108,58 @@ uint8_t Workers::maxThreads() {
   return uint8_t(th);
   }
 
+bool Workers::setParticipantLimit(uint8_t participants) {
+  switch(participants) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 6:
+      inst().participantLimitCfg.store(participants);
+      return true;
+    default:
+      return false;
+    }
+  }
+
+uint8_t Workers::participantLimit() {
+  return inst().participantLimitCfg.load();
+  }
+
+Workers::Telemetry Workers::telemetrySnapshot() {
+  auto& w = inst();
+  Telemetry ret;
+  ret.hardwareConcurrency = std::thread::hardware_concurrency();
+  ret.participantLimit    = w.participantLimitCfg.load();
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+  ret.lastWorkersRequested = w.telemetryLastWorkersRequested.load();
+  ret.lastWorkersUsed      = w.telemetryLastWorkersUsed.load();
+  ret.maxWorkersUsed       = w.telemetryMaxWorkersUsed.load();
+  ret.dispatches           = w.telemetryDispatches.load();
+  ret.workerWakeups        = w.telemetryWorkerWakeups.load();
+  ret.workersUsedTotal     = w.telemetryWorkersUsedTotal.load();
+  ret.mainWaitYields       = w.telemetryMainWaitYields.load();
+  ret.mainWaitNs           = w.telemetryMainWaitNs.load();
+#endif
+  return ret;
+  }
+
+void Workers::resetTelemetry() {
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+  auto& w = inst();
+  w.telemetryWorkerMask.store(0);
+  w.telemetryLastWorkersRequested.store(0);
+  w.telemetryLastWorkersUsed.store(0);
+  w.telemetryMaxWorkersUsed.store(0);
+  w.telemetryDispatches.store(0);
+  w.telemetryWorkerWakeups.store(0);
+  w.telemetryWorkersUsedTotal.store(0);
+  w.telemetryMainWaitYields.store(0);
+  w.telemetryMainWaitNs.store(0);
+#endif
+  }
+
 void Workers::threadFunc(size_t id) {
   {
   string_frm tname("Workers [",int(id),"]");
@@ -122,12 +178,29 @@ void Workers::threadFunc(size_t id) {
       return;
       }
 
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+    telemetryWorkerWakeups.fetch_add(1);
+#endif
+
+    bool didWork = false;
     if(workSet==nullptr) {
-      auto idx = progressIt.fetch_add(1);
-      workFunc(workSet+idx, 1);
+      if(indexedTaskMode) {
+        didWork = indexedTaskLoop()>0;
+        } else {
+        auto idx = progressIt.fetch_add(1);
+        workFunc(reinterpret_cast<void*>(uintptr_t(idx)), 1);
+        didWork = true;
+        }
       } else {
-      taskLoop();
+      didWork = taskLoop()>0;
       }
+
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+    if(didWork)
+      telemetryWorkerMask.fetch_or(uint32_t(1u)<<uint32_t(id));
+#else
+    (void)didWork;
+#endif
 
     taskDone.fetch_add(1);
     // if(size_t(taskDone.fetch_add(1)+1)==taskCount)
@@ -150,25 +223,81 @@ uint32_t Workers::taskLoop() {
   return count;
   }
 
+uint32_t Workers::indexedTaskLoop() {
+  uint32_t count = 0;
+  while(true) {
+    const size_t id = size_t(progressIt.fetch_add(1));
+    if(id>=workSize)
+      break;
+    workFunc(reinterpret_cast<void*>(uintptr_t(id)),1);
+    ++count;
+    }
+  return count;
+  }
+
 void Workers::execWork(uint32_t& minElts) {
   if(workSize==0)
     return;
 
-  if(workSet!=nullptr) {
-    const auto maxTheads = maxThreads();
-    taskCount = uint32_t((workSize+taskPerThread-1)/taskPerThread);
-    taskCount--; // main thread also do tasks
-    if(taskCount>maxTheads)
-      taskCount = maxTheads;
-    if(taskCount<=0)
-      taskCount = 1;
-    } else {
-    taskCount = uint32_t(workSize);
-    }
+  indexedTaskMode = false;
+  const uint8_t configuredParticipants = participantLimitCfg.load();
+  uint32_t naturalWorkerCount = 0;
 
-  if(running && taskCount==1) {
-    workFunc(workSet, workSize);
-    return;
+  if(workSet!=nullptr) {
+    naturalWorkerCount = uint32_t((workSize+taskPerThread-1)/taskPerThread);
+    naturalWorkerCount--; // main thread also does tasks
+
+    if(configuredParticipants==0) {
+      taskCount = std::min<uint32_t>(naturalWorkerCount,maxThreads());
+      // Preserve the historic automatic path: a single calculated worker means
+      // the complete operation stays on the calling thread.
+      if(taskCount<=1) {
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+        telemetryLastWorkersRequested.store(0);
+        telemetryLastWorkersUsed.store(0);
+#endif
+        workFunc(workSet,workSize);
+        return;
+        }
+      } else {
+      const uint32_t maxWorkers = uint32_t(configuredParticipants-1u);
+      taskCount = std::min(naturalWorkerCount,maxWorkers);
+      if(naturalWorkerCount<=1 || taskCount==0) {
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+        telemetryLastWorkersRequested.store(0);
+        telemetryLastWorkersUsed.store(0);
+#endif
+        workFunc(workSet,workSize);
+        return;
+        }
+      }
+    } else {
+    if(!running) {
+      // Destruction must wake every persistent worker, regardless of a QA cap.
+      taskCount = uint32_t(workSize);
+      } else if(configuredParticipants==0) {
+      taskCount = uint32_t(workSize);
+      if(taskCount==1) {
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+        telemetryLastWorkersRequested.store(0);
+        telemetryLastWorkersUsed.store(0);
+#endif
+        workFunc(workSet,workSize);
+        return;
+        }
+      } else {
+      if(workSize<=1 || configuredParticipants==1) {
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+        telemetryLastWorkersRequested.store(0);
+        telemetryLastWorkersUsed.store(0);
+#endif
+        for(size_t i=0;i<workSize;++i)
+          workFunc(reinterpret_cast<void*>(uintptr_t(i)),1);
+        return;
+        }
+      taskCount = std::min<uint32_t>(uint32_t(workSize),uint32_t(configuredParticipants-1u));
+      indexedTaskMode = true;
+      }
     }
 
   minElts = std::max<uint32_t>(minElts, taskPerThread);
@@ -177,11 +306,21 @@ void Workers::execWork(uint32_t& minElts) {
     workFunc(workSet, workSize);
     if(minElts > workSize*2)
       minElts = 0;
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+    telemetryLastWorkersRequested.store(0);
+    telemetryLastWorkersUsed.store(0);
+#endif
     return;
     }
 
   progressIt.store(0);
   taskDone.store(0);
+
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+  telemetryWorkerMask.store(0);
+  telemetryLastWorkersRequested.store(taskCount);
+  telemetryDispatches.fetch_add(1);
+#endif
 
   {
   std::unique_lock<std::mutex> lck(sync);
@@ -190,12 +329,26 @@ void Workers::execWork(uint32_t& minElts) {
   workWait.notify_all();
 
   uint32_t cnt = 0;
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+  uint64_t yieldCount = 0;
+#endif
   if(workSet==nullptr) {
-    std::this_thread::yield();
+    if(indexedTaskMode) {
+      cnt = indexedTaskLoop(); (void)cnt;
+      }
     } else {
     cnt = taskLoop(); (void)cnt;
     }
 
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+  const auto waitBegin = std::chrono::steady_clock::now();
+#endif
+  if(workSet==nullptr && !indexedTaskMode) {
+    std::this_thread::yield();
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+    ++yieldCount;
+#endif
+    }
   while(true) {
     int expect = int(taskCount);
     if(taskDone.load()==expect) {
@@ -203,5 +356,27 @@ void Workers::execWork(uint32_t& minElts) {
       break;
       }
     std::this_thread::yield();
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+    ++yieldCount;
+#endif
     }
+#if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
+  const auto waitEnd = std::chrono::steady_clock::now();
+  const uint64_t waitNs = uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(waitEnd-waitBegin).count());
+  uint32_t mask = telemetryWorkerMask.load();
+  uint8_t workersUsed = 0;
+  while(mask!=0) {
+    workersUsed += uint8_t(mask&1u);
+    mask >>= 1u;
+    }
+  telemetryLastWorkersUsed.store(workersUsed);
+  telemetryWorkersUsedTotal.fetch_add(workersUsed);
+  telemetryMainWaitYields.fetch_add(yieldCount);
+  telemetryMainWaitNs.fetch_add(waitNs);
+
+  uint8_t maxUsed = telemetryMaxWorkersUsed.load();
+  while(maxUsed<workersUsed &&
+        !telemetryMaxWorkersUsed.compare_exchange_weak(maxUsed,workersUsed)) {
+    }
+#endif
   }
