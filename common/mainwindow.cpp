@@ -31,6 +31,10 @@
 #include "utils/exceptiondump.h"
 #if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
 #include "utils/memoryinfo.h"
+#include "utils/workers.h"
+#endif
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+#include "utils/perflab.h"
 #endif
 #include "ui/padglyph.h"
 
@@ -101,6 +105,14 @@ MainWindow::MainWindow(Device& device)
 
   Gothic::inst().onSettingsChanged.bind(this,&MainWindow::onSettings);
   onSettings();
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  const auto atmosphere = renderer.atmosphereQaConfig();
+  Log::i(string_frm<512>("PERF_LAB v=1 workers=",int(Workers::participantLimit()),
+                         " sky_lut_interval=",int(atmosphere.skyLutCadence),
+                         " fog_lut_profile=",int(atmosphere.fogLqResolution),
+                         " world_far_plane=",Camera::configuredFarPlane(),
+                         " water_reflection_mode=",int(renderer.waterReflectionModeForQa())).c_str());
+#endif
 #if defined(__IOS__)
   Tempest::iOS::setIdleTimerDisabled(true);
 #endif
@@ -528,6 +540,18 @@ void MainWindow::onSettings() {
   if(zMaxFps>0)
     maxFpsInv = 1000u/uint64_t(zMaxFps); else
     maxFpsInv = 0;
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  Workers::setParticipantLimit(PerfLab::workerParticipants());
+
+  Renderer::AtmosphereQaConfig atmosphere;
+  atmosphere.skyLutCadence = Renderer::AtmosphereSkyLutCadence(PerfLab::skyLutInterval());
+  atmosphere.fogLqResolution = Renderer::AtmosphereFogLqResolution(PerfLab::fogLutProfile());
+  renderer.setAtmosphereQaConfig(atmosphere);
+  renderer.setWaterReflectionModeForQa(PerfLab::waterReflectionMode());
+
+  if(auto* camera = Gothic::inst().camera())
+    camera->setWorldFarPlaneForQa(PerfLab::worldFarPlane());
+#endif
 #if defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
   // settingsSetI() emits onSettingsChanged immediately, so rebuilding the
   // projection here makes the stock Draw distance choice live in-game.
@@ -1187,6 +1211,8 @@ void MainWindow::resetPerfWindow(uint64_t nowUs) {
   perfWindow.framesSubmitted = 0;
   perfWindow.fenceMisses     = 0;
   perfWindow.scene           = perfScene();
+  Workers::resetTelemetry();
+  renderer.resetAtmosphereQaCounters();
   }
 
 void MainWindow::beginPerfFrame(uint64_t nowUs) {
@@ -1226,14 +1252,20 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
   const size_t npcCount = world!=nullptr ? size_t(world->npcCount()) : 0u;
   const auto npcAnimation = world!=nullptr ? world->animationStats() : WorldObjects::AnimationStats{};
   const double measuredFps = double(perfWindow.framesSubmitted)*1000000.0/double(elapsedUs);
-#if defined(OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT)
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  constexpr const char* perfExperiment = "ios_performance_lab";
+#elif defined(OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT)
   constexpr const char* perfExperiment = "three_frames_in_flight";
 #elif defined(OPENGOTHIC_NPC_DIALOG_CULLING)
   constexpr const char* perfExperiment = "npc_dialog_culling";
 #else
   constexpr const char* perfExperiment = "control";
 #endif
-#if defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  constexpr const char* gpuExperiment = "ios_performance_lab";
+  const uint32_t worldFarPlane = Camera::configuredFarPlane();
+  const uint32_t drawDistancePercent = worldFarPlane/1000u;
+#elif defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
   constexpr const char* gpuExperiment = "dynamic_draw_distance";
   const uint32_t worldFarPlane = Camera::configuredFarPlane();
   const uint32_t drawDistancePercent = worldFarPlane/1000u;
@@ -1261,7 +1293,10 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
   constexpr const char* framePacer = "software_sleep";
 #endif
 
-  string_frm<1024> line("PERF v=1 scene=",perfWindow.scene,
+  const auto workerTelemetry = Workers::telemetrySnapshot();
+  const auto atmosphereTelemetry = renderer.atmosphereQaSnapshot();
+
+  string_frm<2048> line("PERF v=2 scene=",perfWindow.scene,
                         " perf_exp=",perfExperiment,
                         " gpu_exp=",gpuExperiment,
                         " direct_drawable=",directDrawable,
@@ -1285,6 +1320,29 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
                         " npc=",npcCount,
                         " npc_full_pose=",npcAnimation.fullPose,
                         " npc_events_only=",npcAnimation.eventsOnly,
+                        " worker_hw=",workerTelemetry.hardwareConcurrency,
+                        " worker_participants=",int(workerTelemetry.participantLimit),
+                        " worker_requested=",int(workerTelemetry.lastWorkersRequested),
+                        " worker_used=",int(workerTelemetry.lastWorkersUsed),
+                        " worker_max_used=",int(workerTelemetry.maxWorkersUsed),
+                        " worker_dispatches=",size_t(workerTelemetry.dispatches),
+                        " worker_wakeups=",size_t(workerTelemetry.workerWakeups),
+                        " worker_used_total=",size_t(workerTelemetry.workersUsedTotal),
+                        " worker_wait_yields=",size_t(workerTelemetry.mainWaitYields),
+                        " worker_wait_ms=",double(workerTelemetry.mainWaitNs)/1000000.0,
+                        " sky_lut_interval=",int(atmosphereTelemetry.config.skyLutCadence),
+                        " sky_prepare=",size_t(atmosphereTelemetry.skyPrepareCalls),
+                        " sky_lut_updates=",size_t(atmosphereTelemetry.skyViewLutUpdates),
+                        " sky_lut_skips=",size_t(atmosphereTelemetry.skyViewLutSkips),
+                        " fog_lut_profile=",int(atmosphereTelemetry.config.fogLqResolution),
+                        " fog_lq=",atmosphereTelemetry.fogLutIsLq ? 1 : 0,
+                        " fog_lut_w=",atmosphereTelemetry.fogLutWidth,
+                        " fog_lut_h=",atmosphereTelemetry.fogLutHeight,
+                        " fog_lut_d=",atmosphereTelemetry.fogLutDepth,
+                        " fog_prepare=",size_t(atmosphereTelemetry.fogPrepareCalls),
+                        " fog_lut_updates=",size_t(atmosphereTelemetry.fogLutUpdates),
+                        " fog_lut_realloc=",size_t(atmosphereTelemetry.fogLutReallocations),
+                        " water_reflection_mode=",int(renderer.waterReflectionModeForQa()),
                         " mem_footprint_mb=",memoryMiB(mem.footprintBytes,mem.footprintValid),
                         " mem_available_mb=",memoryMiB(mem.availableBytes,mem.availableValid),
                         " mem_ceiling_mb=",memoryMiB(ceiling,ceilingValid),
