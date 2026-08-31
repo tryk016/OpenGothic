@@ -114,14 +114,16 @@ remote_pid_is_running() {
     return 2
   fi
 
+  local jq_status=0
   if jq -e --argjson pid "$remote_pid" --arg prefix "$app_url" \
       'any(.result.runningProcesses[]?;
            .processIdentifier==$pid and ((.executable // "") | startswith($prefix)))' \
       "$check_json" >/dev/null; then
     return 0
+  else
+    jq_status=$?
   fi
 
-  local jq_status=$?
   [[ $jq_status -eq 1 ]] && return 1
   return 2
 }
