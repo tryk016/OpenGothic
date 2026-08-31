@@ -16,6 +16,7 @@ class PerfLab final {
     static uint8_t  workerParticipants();
     static uint8_t  skyLutInterval();
     static uint8_t  fogLutProfile();
+    static uint8_t  renderScalePercent();
     static uint32_t worldFarPlane();
     static uint8_t  waterReflectionMode();
     static NpcPoseMode npcPoseMode();

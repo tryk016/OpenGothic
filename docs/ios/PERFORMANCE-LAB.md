@@ -14,6 +14,7 @@ invalid values preserve the public-port behavior.
 workerParticipants=0
 skyLutInterval=1
 fogLutProfile=0
+renderScalePercent=0
 worldFarPlane=100000
 waterReflectionMode=0
 npcPoseMode=0
@@ -27,6 +28,10 @@ Selectors:
 - `fogLutProfile`: low-quality sizes are `0` = 160x90x64,
   `1` = 120x68x48 and `2` = 96x54x32. HQ and epipolar sizes are
   respectively 128x64x32, 96x48x24 and 64x32x16.
+- `renderScalePercent`: `0` preserves the normal `vidResIndex` mapping;
+  `50`, `60`, `67`, and `75` select a fixed linear internal resolution for
+  controlled MetalFX Spatial comparisons. It is sampled at renderer setup, so
+  restart the app after changing it.
 - `worldFarPlane`: `100000`, `80000`, or `60000` Gothic units.
 - `waterReflectionMode`: `0` = current masked full-screen pass,
   `1` = disabled control. Mode `2` is rejected: the expensive SSR path is

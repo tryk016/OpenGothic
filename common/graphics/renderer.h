@@ -72,6 +72,7 @@ class Renderer final {
     void                 resetAtmosphereQaCounters();
     bool                 setWaterReflectionModeForQa(uint8_t mode);
     uint8_t              waterReflectionModeForQa() const;
+    uint8_t              renderScalePercentForQa() const;
 
     void draw(Tempest::Attachment& result, Tempest::Encoder<Tempest::CommandBuffer>& cmd, uint8_t fId,
               Tempest::VectorImage::Mesh& uiLayer, Tempest::VectorImage::Mesh& numOverlay,
@@ -217,6 +218,7 @@ class Renderer final {
       float          moonSize           = 0;
 
       float          vidResIndex        = 0;
+      uint8_t        qaRenderScalePercent = 0;
 
       float          vsmMipBias         = 0.25; //TODO: set to lower, eventually
       } settings;

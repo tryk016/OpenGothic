@@ -14,6 +14,7 @@
 #include "ui/videowidget.h"
 #include "camera.h"
 #include "gothic.h"
+#include "utils/perflab.h"
 #include "utils/string_frm.h"
 
 using namespace Tempest;
@@ -288,6 +289,11 @@ void Renderer::setupSettings() {
     settings.moonSize = 400;
 
   settings.vidResIndex = Gothic::inst().settingsGetF("INTERNAL","vidResIndex");
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  settings.qaRenderScalePercent = PerfLab::renderScalePercent();
+#else
+  settings.qaRenderScalePercent = 0;
+#endif
   settings.aaEnabled   = (Gothic::options().aaPreset>0) && (settings.vidResIndex==0);
 
   // direct lighting
@@ -3139,6 +3145,8 @@ Tempest::Attachment Renderer::screenshoot(uint8_t frameId) {
   }
 
 float Renderer::internalResolutionScale() const {
+  if(settings.qaRenderScalePercent!=0)
+    return float(settings.qaRenderScalePercent)/100.f;
   if(settings.vidResIndex==0)
     return 1;
   if(settings.vidResIndex==1)
@@ -3147,9 +3155,25 @@ float Renderer::internalResolutionScale() const {
   }
 
 Size Renderer::internalResolution(Tempest::Size src) const {
+  if(settings.qaRenderScalePercent!=0) {
+    const int percent = int(settings.qaRenderScalePercent);
+    const int width   = std::max(2,((src.w*percent + 50)/100) & ~1);
+    const int height  = std::max(2,((src.h*percent + 50)/100) & ~1);
+    return Size(width,height);
+    }
   if(settings.vidResIndex==0)
      return src;
   if(settings.vidResIndex==1)
     return Size(3*src.w/4, 3*src.h/4);
   return Size(src.w/2, src.h/2);
+  }
+
+uint8_t Renderer::renderScalePercentForQa() const {
+  if(settings.qaRenderScalePercent!=0)
+    return settings.qaRenderScalePercent;
+  if(settings.vidResIndex==0)
+    return 100;
+  if(settings.vidResIndex==1)
+    return 75;
+  return 50;
   }

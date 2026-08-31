@@ -63,6 +63,15 @@ uint8_t PerfLab::fogLutProfile() {
   return 0; // 160x90x64, identical to the public LQ path
   }
 
+uint8_t PerfLab::renderScalePercent() {
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  const int value = Gothic::settingsGetI(Section,"renderScalePercent");
+  if(value==50 || value==60 || value==67 || value==75)
+    return uint8_t(value);
+#endif
+  return 0; // use the normal vidResIndex mapping
+  }
+
 uint32_t PerfLab::worldFarPlane() {
 #if defined(OPENGOTHIC_IOS_PERF_LAB)
   const int value = Gothic::settingsGetI(Section,"worldFarPlane");

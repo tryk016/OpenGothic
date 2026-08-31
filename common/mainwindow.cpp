@@ -1311,6 +1311,7 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
                         " draw_distance_percent=",drawDistancePercent,
                         " fps_limit=",maxFpsTarget,
                         " frame_pacer=",framePacer,
+                        " render_scale_percent=",int(renderer.renderScalePercentForQa()),
                         " window_ms=",size_t(elapsedUs/1000u),
                         " fps=",measuredFps,
                         " frame_p50_ms=",percentileMs(perfWindow.frameUs,50u),
