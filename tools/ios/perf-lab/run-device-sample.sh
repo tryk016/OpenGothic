@@ -114,9 +114,16 @@ remote_pid_is_running() {
     return 2
   fi
 
-  jq -e --argjson pid "$remote_pid" --arg prefix "$app_url" \
-    '.result.runningProcesses[]? | select(.processIdentifier==$pid and ((.executable // "") | startswith($prefix)))' \
-    "$check_json" >/dev/null
+  if jq -e --argjson pid "$remote_pid" --arg prefix "$app_url" \
+      'any(.result.runningProcesses[]?;
+           .processIdentifier==$pid and ((.executable // "") | startswith($prefix)))' \
+      "$check_json" >/dev/null; then
+    return 0
+  fi
+
+  local jq_status=$?
+  [[ $jq_status -eq 1 ]] && return 1
+  return 2
 }
 
 terminate_remote_process() {
