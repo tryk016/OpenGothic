@@ -32,15 +32,15 @@ class Renderer final {
       Every6Frames = 6,
       };
 
-    enum class AtmosphereFogLqResolution : uint8_t {
-      Baseline160x90x64,
-      Medium120x68x48,
-      Low96x54x32,
+    enum class AtmosphereFogResolution : uint8_t {
+      Baseline,
+      Medium,
+      Low,
       };
 
     struct AtmosphereQaConfig {
-      AtmosphereSkyLutCadence   skyLutCadence   = AtmosphereSkyLutCadence::EveryFrame;
-      AtmosphereFogLqResolution fogLqResolution = AtmosphereFogLqResolution::Baseline160x90x64;
+      AtmosphereSkyLutCadence skyLutCadence = AtmosphereSkyLutCadence::EveryFrame;
+      AtmosphereFogResolution fogResolution  = AtmosphereFogResolution::Baseline;
       };
 
     struct AtmosphereQaSnapshot {
@@ -93,14 +93,14 @@ class Renderer final {
       Epipolar,
       PathTrace,
       };
-    struct FogLqDimensions {
+    struct FogDimensions {
       uint32_t width  = 160;
       uint32_t height = 90;
       uint32_t depth  = 64;
       };
 
-    FogLqDimensions fogLqDimensions() const;
-    uint32_t        skyLutCadenceFrames() const;
+    FogDimensions fogDimensions(Quality quality) const;
+    uint32_t      skyLutCadenceFrames() const;
     Tempest::Size internalResolution(Tempest::Size src) const;
     float         internalResolutionScale() const;
 
@@ -291,7 +291,7 @@ class Renderer final {
 
     struct AtmosphereQaState {
       std::atomic<uint8_t>  skyLutCadence  {uint8_t(AtmosphereSkyLutCadence::EveryFrame)};
-      std::atomic<uint8_t>  fogLqResolution{uint8_t(AtmosphereFogLqResolution::Baseline160x90x64)};
+      std::atomic<uint8_t>  fogResolution{uint8_t(AtmosphereFogResolution::Baseline)};
       std::atomic<uint64_t> skyPrepareCalls     {0};
       std::atomic<uint64_t> skyViewLutUpdates   {0};
       std::atomic<uint64_t> skyViewLutSkips     {0};

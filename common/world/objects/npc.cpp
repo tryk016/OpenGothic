@@ -16,6 +16,9 @@
 #include "utils/versioninfo.h"
 #include "utils/fileext.h"
 #include "utils/dbgpainter.h"
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+#include "utils/perflab.h"
+#endif
 #include "camera.h"
 #include "gothic.h"
 #include "resources.h"
@@ -4800,6 +4803,15 @@ void Npc::updateTransform() {
   }
 
 void Npc::updateAnimation(uint64_t dt, bool force, PoseUpdate poseUpdate) {
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  // Full-pose is the control variant. Switching to it while an NPC has a
+  // deferred pose falls through to forcePose below, rebuilding the skeleton
+  // and attachments immediately in this same update.
+  if(poseUpdate==PoseUpdate::EventsOnly &&
+     PerfLab::npcPoseMode()==PerfLab::NpcPoseMode::FullPose)
+    poseUpdate = PoseUpdate::Full;
+#endif
+
   const auto camera = Gothic::inst().camera();
   if(isPlayer() && camera!=nullptr && camera->isFree())
     dt = 0;

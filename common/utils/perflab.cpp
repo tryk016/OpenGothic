@@ -2,9 +2,12 @@
 
 #include "gothic.h"
 
+#include <atomic>
+
 namespace {
 #if defined(OPENGOTHIC_IOS_PERF_LAB)
 constexpr auto Section = "IOS_PERF_LAB";
+std::atomic_uint8_t npcPoseModeCache{uint8_t(PerfLab::NpcPoseMode::CullDistantOffscreen)};
 #endif
 }
 
@@ -13,6 +16,15 @@ bool PerfLab::enabled() {
   return true;
 #else
   return false;
+#endif
+  }
+
+void PerfLab::refreshRuntimeSelectors() {
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  const int value = Gothic::settingsGetI(Section,"npcPoseMode");
+  const auto mode = value==int(NpcPoseMode::FullPose) ?
+                    NpcPoseMode::FullPose : NpcPoseMode::CullDistantOffscreen;
+  npcPoseModeCache.store(uint8_t(mode),std::memory_order_relaxed);
 #endif
   }
 
@@ -69,4 +81,12 @@ uint8_t PerfLab::waterReflectionMode() {
     return uint8_t(value);
 #endif
   return 0; // current full-screen masked pass
+  }
+
+PerfLab::NpcPoseMode PerfLab::npcPoseMode() {
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  return NpcPoseMode(npcPoseModeCache.load(std::memory_order_relaxed));
+#else
+  return NpcPoseMode::CullDistantOffscreen;
+#endif
   }

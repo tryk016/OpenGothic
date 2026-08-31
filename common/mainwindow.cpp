@@ -109,9 +109,10 @@ MainWindow::MainWindow(Device& device)
   const auto atmosphere = renderer.atmosphereQaConfig();
   Log::i(string_frm<512>("PERF_LAB v=1 workers=",int(Workers::participantLimit()),
                          " sky_lut_interval=",int(atmosphere.skyLutCadence),
-                         " fog_lut_profile=",int(atmosphere.fogLqResolution),
+                         " fog_lut_profile=",int(atmosphere.fogResolution),
                          " world_far_plane=",Camera::configuredFarPlane(),
-                         " water_reflection_mode=",int(renderer.waterReflectionModeForQa())).c_str());
+                         " water_reflection_mode=",int(renderer.waterReflectionModeForQa()),
+                         " npc_pose_mode=",int(PerfLab::npcPoseMode())).c_str());
 #endif
 #if defined(__IOS__)
   Tempest::iOS::setIdleTimerDisabled(true);
@@ -541,11 +542,12 @@ void MainWindow::onSettings() {
     maxFpsInv = 1000u/uint64_t(zMaxFps); else
     maxFpsInv = 0;
 #if defined(OPENGOTHIC_IOS_PERF_LAB)
+  PerfLab::refreshRuntimeSelectors();
   Workers::setParticipantLimit(PerfLab::workerParticipants());
 
   Renderer::AtmosphereQaConfig atmosphere;
   atmosphere.skyLutCadence = Renderer::AtmosphereSkyLutCadence(PerfLab::skyLutInterval());
-  atmosphere.fogLqResolution = Renderer::AtmosphereFogLqResolution(PerfLab::fogLutProfile());
+  atmosphere.fogResolution = Renderer::AtmosphereFogResolution(PerfLab::fogLutProfile());
   renderer.setAtmosphereQaConfig(atmosphere);
   renderer.setWaterReflectionModeForQa(PerfLab::waterReflectionMode());
 
@@ -1295,6 +1297,11 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
 
   const auto workerTelemetry = Workers::telemetrySnapshot();
   const auto atmosphereTelemetry = renderer.atmosphereQaSnapshot();
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  const int npcPoseMode = int(PerfLab::npcPoseMode());
+#else
+  constexpr int npcPoseMode = -1;
+#endif
 
   string_frm<2048> line("PERF v=2 scene=",perfWindow.scene,
                         " perf_exp=",perfExperiment,
@@ -1320,6 +1327,7 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
                         " npc=",npcCount,
                         " npc_full_pose=",npcAnimation.fullPose,
                         " npc_events_only=",npcAnimation.eventsOnly,
+                        " npc_pose_mode=",npcPoseMode,
                         " worker_hw=",workerTelemetry.hardwareConcurrency,
                         " worker_participants=",int(workerTelemetry.participantLimit),
                         " worker_requested=",int(workerTelemetry.lastWorkersRequested),
@@ -1334,7 +1342,7 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
                         " sky_prepare=",size_t(atmosphereTelemetry.skyPrepareCalls),
                         " sky_lut_updates=",size_t(atmosphereTelemetry.skyViewLutUpdates),
                         " sky_lut_skips=",size_t(atmosphereTelemetry.skyViewLutSkips),
-                        " fog_lut_profile=",int(atmosphereTelemetry.config.fogLqResolution),
+                        " fog_lut_profile=",int(atmosphereTelemetry.config.fogResolution),
                         " fog_lq=",atmosphereTelemetry.fogLutIsLq ? 1 : 0,
                         " fog_lut_w=",atmosphereTelemetry.fogLutWidth,
                         " fog_lut_h=",atmosphereTelemetry.fogLutHeight,

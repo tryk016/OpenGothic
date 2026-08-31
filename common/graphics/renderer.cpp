@@ -144,28 +144,29 @@ void Renderer::setAtmosphereQaConfig(const AtmosphereQaConfig& config) {
       break;
     }
 
-  auto fogResolution = config.fogLqResolution;
+  auto fogResolution = config.fogResolution;
   switch(fogResolution) {
-    case AtmosphereFogLqResolution::Baseline160x90x64:
-    case AtmosphereFogLqResolution::Medium120x68x48:
-    case AtmosphereFogLqResolution::Low96x54x32:
+    case AtmosphereFogResolution::Baseline:
+    case AtmosphereFogResolution::Medium:
+    case AtmosphereFogResolution::Low:
       break;
     default:
-      fogResolution = AtmosphereFogLqResolution::Baseline160x90x64;
+      fogResolution = AtmosphereFogResolution::Baseline;
       break;
     }
 
   const auto oldCadence = AtmosphereSkyLutCadence(atmosphereQa.skyLutCadence.load(std::memory_order_relaxed));
-  const auto oldFog      = AtmosphereFogLqResolution(atmosphereQa.fogLqResolution.load(std::memory_order_relaxed));
+  const auto oldFog      = AtmosphereFogResolution(atmosphereQa.fogResolution.load(std::memory_order_relaxed));
   atmosphereQa.skyLutCadence.store(uint8_t(cadence), std::memory_order_relaxed);
-  atmosphereQa.fogLqResolution.store(uint8_t(fogResolution), std::memory_order_relaxed);
+  atmosphereQa.fogResolution.store(uint8_t(fogResolution), std::memory_order_relaxed);
 
   if(oldCadence!=cadence) {
     sky.viewLutInvalidated          = true;
     sky.viewLutFramesUntilUpdate    = 0;
     }
 
-  if(oldFog!=fogResolution && sky.quality==VolumetricLQ) {
+  if(oldFog!=fogResolution &&
+     (sky.quality==VolumetricLQ || sky.quality==VolumetricHQ || sky.quality==Epipolar)) {
     Resources::device().waitIdle();
     resetSkyFog();
     }
@@ -174,7 +175,7 @@ void Renderer::setAtmosphereQaConfig(const AtmosphereQaConfig& config) {
 Renderer::AtmosphereQaConfig Renderer::atmosphereQaConfig() const {
   AtmosphereQaConfig ret;
   ret.skyLutCadence = AtmosphereSkyLutCadence(atmosphereQa.skyLutCadence.load(std::memory_order_relaxed));
-  ret.fogLqResolution = AtmosphereFogLqResolution(atmosphereQa.fogLqResolution.load(std::memory_order_relaxed));
+  ret.fogResolution = AtmosphereFogResolution(atmosphereQa.fogResolution.load(std::memory_order_relaxed));
   return ret;
   }
 
@@ -216,16 +217,17 @@ uint8_t Renderer::waterReflectionModeForQa() const {
   return waterReflectionQaMode.load(std::memory_order_relaxed);
   }
 
-Renderer::FogLqDimensions Renderer::fogLqDimensions() const {
-  const auto mode = AtmosphereFogLqResolution(atmosphereQa.fogLqResolution.load(std::memory_order_relaxed));
+Renderer::FogDimensions Renderer::fogDimensions(Quality quality) const {
+  const auto mode = AtmosphereFogResolution(atmosphereQa.fogResolution.load(std::memory_order_relaxed));
+  const bool hq = quality==VolumetricHQ || quality==Epipolar;
   switch(mode) {
-    case AtmosphereFogLqResolution::Medium120x68x48:
-      return {120,68,48};
-    case AtmosphereFogLqResolution::Low96x54x32:
-      return {96,54,32};
-    case AtmosphereFogLqResolution::Baseline160x90x64:
+    case AtmosphereFogResolution::Medium:
+      return hq ? FogDimensions{96,48,24} : FogDimensions{120,68,48};
+    case AtmosphereFogResolution::Low:
+      return hq ? FogDimensions{64,32,16} : FogDimensions{96,54,32};
+    case AtmosphereFogResolution::Baseline:
     default:
-      return {160,90,64};
+      return hq ? FogDimensions{128,64,32} : FogDimensions{160,90,64};
     }
   }
 
@@ -768,14 +770,22 @@ void Renderer::resetSkyFog() {
       desiredQuality = PathTrace;
   }
 
-  const auto lqSize = fogLqDimensions();
+  const auto fogSize = fogDimensions(desiredQuality);
   const bool qualityChanged = sky.quality!=desiredQuality;
-  const bool lqSizeChanged = desiredQuality==VolumetricLQ &&
-                             (sky.fogLut3D.isEmpty() ||
-                              uint32_t(sky.fogLut3D.w())!=lqSize.width ||
-                              uint32_t(sky.fogLut3D.h())!=lqSize.height ||
-                              uint32_t(sky.fogLut3D.d())!=lqSize.depth);
-  if(!qualityChanged && !lqSizeChanged)
+  const bool hasFogLut = desiredQuality==VolumetricLQ ||
+                         desiredQuality==VolumetricHQ ||
+                         desiredQuality==Epipolar;
+  const bool fogSizeChanged = hasFogLut &&
+                              (sky.fogLut3D.isEmpty() ||
+                               uint32_t(sky.fogLut3D.w())!=fogSize.width ||
+                               uint32_t(sky.fogLut3D.h())!=fogSize.height ||
+                               uint32_t(sky.fogLut3D.d())!=fogSize.depth);
+  const bool fogMsSizeChanged = (desiredQuality==VolumetricHQ || desiredQuality==Epipolar) &&
+                                (sky.fogLut3DMs.isEmpty() ||
+                                 uint32_t(sky.fogLut3DMs.w())!=fogSize.width ||
+                                 uint32_t(sky.fogLut3DMs.h())!=fogSize.height ||
+                                 uint32_t(sky.fogLut3DMs.d())!=fogSize.depth);
+  if(!qualityChanged && !fogSizeChanged && !fogMsSizeChanged)
     return;
 
   sky.quality = desiredQuality;
@@ -793,16 +803,16 @@ void Renderer::resetSkyFog() {
   switch(sky.quality) {
     case None:
     case VolumetricLQ:
-      sky.fogLut3D = device.image3d(sky.lutRGBAFormat, lqSize.width, lqSize.height, lqSize.depth);
+      sky.fogLut3D = device.image3d(sky.lutRGBAFormat, fogSize.width, fogSize.height, fogSize.depth);
       break;
     case VolumetricHQ:
       // fogLut and oclussion are decupled
-      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,  128,64,32);
-      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat, 128,64,32);
+      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,  fogSize.width, fogSize.height, fogSize.depth);
+      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat, fogSize.width, fogSize.height, fogSize.depth);
       break;
     case Epipolar:
-      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,  128,64,32);
-      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat, 128,64,32);
+      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,  fogSize.width, fogSize.height, fogSize.depth);
+      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat, fogSize.width, fogSize.height, fogSize.depth);
       break;
     case PathTrace:
       break;
