@@ -4,6 +4,7 @@
 #include <Tempest/Log>
 
 #include <algorithm>
+#include <atomic>
 
 #include "world/objects/npc.h"
 #include "world/objects/interactive.h"
@@ -13,6 +14,7 @@
 #include "game/serialize.h"
 #include "utils/gthfont.h"
 #include "utils/dbgpainter.h"
+#include "utils/perflab.h"
 #include "gothic.h"
 
 #include "utils/string_frm.h"
@@ -24,10 +26,23 @@ constexpr uint32_t drawDistanceFarPlane(int sightValue) {
   return uint32_t(std::clamp(sightValue,0,14)+1)*20000u;
   }
 
+constexpr bool isQaWorldFarPlane(uint32_t distance) {
+  return distance==Camera::worldFarPlaneDefault ||
+         distance==Camera::worldFarPlaneMedium  ||
+         distance==Camera::worldFarPlaneShort;
+  }
+
+static_assert(isQaWorldFarPlane(Camera::worldFarPlaneDefault));
+static_assert(isQaWorldFarPlane(Camera::worldFarPlaneMedium));
+static_assert(isQaWorldFarPlane(Camera::worldFarPlaneShort));
+static_assert(!isQaWorldFarPlane(20000u));
+static_assert(!isQaWorldFarPlane(300000u));
 static_assert(drawDistanceFarPlane(0)==20000u);
 static_assert(drawDistanceFarPlane(3)==80000u);
 static_assert(drawDistanceFarPlane(4)==100000u);
 static_assert(drawDistanceFarPlane(14)==300000u);
+
+std::atomic<uint32_t> qaWorldFarPlane{Camera::worldFarPlaneDefault};
 }
 
 static float angleMod(float a) {
@@ -91,6 +106,9 @@ static Vec3 toAngles(zenkit::Quat q) {
 const float Camera::minLength = 0.0001f;
 
 Camera::Camera() {
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  qaWorldFarPlane.store(PerfLab::worldFarPlane(),std::memory_order_relaxed);
+#endif
   }
 
 void Camera::reset() {
@@ -164,15 +182,31 @@ float Camera::zFar() const {
   return float(configuredFarPlane());
   }
 
+bool Camera::setWorldFarPlaneForQa(uint32_t distance) {
+  if(!isQaWorldFarPlane(distance))
+    return false;
+
+  const uint32_t previous = qaWorldFarPlane.exchange(distance,std::memory_order_relaxed);
+  if(previous==distance)
+    return true;
+
+  // Rebuild the projection immediately when the camera already has a usable
+  // viewport. Calling this before the first viewport is also valid: the first
+  // setViewport() will pick up the selected distance through zFar().
+  if(vpWidth>0 && vpHeight>0)
+    setViewport(vpWidth,vpHeight);
+  return true;
+  }
+
 uint32_t Camera::configuredFarPlane() {
-#if defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
-  // MENUITEM_GRA_SIGHT_CHOICE stores an index: 0=20%, 1=40%, ...,
-  // 4=100%, ... 14=300%. Treat 100% as the historical 100000-unit plane.
+#if defined(OPENGOTHIC_IOS_PERF_LAB)
+  return qaWorldFarPlane.load(std::memory_order_relaxed);
+#elif defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
   return drawDistanceFarPlane(Gothic::settingsGetI("PERFORMANCE","sightValue"));
 #elif defined(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000)
-  return 60000u;
+  return worldFarPlaneShort;
 #else
-  return 100000u;
+  return worldFarPlaneDefault;
 #endif
   }
 

@@ -16,6 +16,9 @@ class Camera final {
     Camera();
 
     constexpr static const float minShadowY = -0.025f;
+    constexpr static uint32_t worldFarPlaneDefault = 100000u;
+    constexpr static uint32_t worldFarPlaneMedium  =  80000u;
+    constexpr static uint32_t worldFarPlaneShort   =  60000u;
 
     enum Mode {
       Dialog,
@@ -116,6 +119,7 @@ class Camera final {
 
     float              zNear() const;
     float              zFar()  const;
+    bool               setWorldFarPlaneForQa(uint32_t distance);
     static uint32_t     configuredFarPlane();
 
   private:
