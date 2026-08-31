@@ -118,8 +118,10 @@ are optional and do not change the renderer used on other platforms:
 - Metal shader-module caching;
 - precompiled libraries for the small startup shader set, with normal runtime
   compilation as the authoritative fallback;
-- MetalFX Spatial upscaling;
-- MetalFX Temporal upscaling with Spatial and Lanczos fallbacks.
+- MetalFX Spatial upscaling with a Lanczos fallback.
+
+The maintained public build enables Spatial and leaves the experimental
+Temporal path disabled.
 
 MetalFX support is opportunistic. If a requested scaler is unavailable or
 rejects the active texture configuration, rendering falls back without making

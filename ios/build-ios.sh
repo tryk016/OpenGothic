@@ -16,11 +16,18 @@ xcode-select -p             >/dev/null || { echo "Install Xcode + run 'xcode-sel
 echo "==> Initializing pinned submodules"
 git -C "$ROOT" submodule update --init --recursive
 
-echo "==> Configuring (Xcode generator, iOS arm64, deployment 15.0)"
+echo "==> Configuring (Xcode generator, iOS arm64, deployment 15.0, MetalFX Spatial)"
 cmake -S "$ROOT" -B "$BUILD" -G Xcode \
   -DCMAKE_SYSTEM_NAME=iOS \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
-  -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+  -DOPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT=ON \
+  -DOPENGOTHIC_IOS_DIRECT_DRAWABLE=ON \
+  -DOPENGOTHIC_NPC_ANIMATION_CULLING=ON \
+  -DOPENGOTHIC_NPC_DIALOG_CULLING=OFF \
+  -DOPENGOTHIC_METALFX_SPATIAL=ON \
+  -DOPENGOTHIC_METALFX_TEMPORAL=OFF \
+  -DOPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS=ON
 
 echo "==> Done. Next:"
 echo "    open \"$BUILD/OpenGothic.xcodeproj\""

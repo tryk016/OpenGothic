@@ -60,7 +60,7 @@ jobs:
             direct_drawable: 'ON'
             npc_animation_culling: 'ON'
             metalfx_spatial: 'ON'
-            metalfx_temporal: 'ON'
+            metalfx_temporal: 'OFF'
             startup_shaders: 'ON'
           - name: iPhoneOS arm64 (runtime startup fallback)
             id: iphoneos-arm64-startup-fallback

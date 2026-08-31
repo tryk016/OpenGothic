@@ -19,16 +19,16 @@ and a mobile performance profile.
 
 ## Install on iPhone or iPad
 
-The maintained build uses MetalFX Temporal with automatic MetalFX Spatial and
-Lanczos fallbacks.
+The maintained build uses MetalFX Spatial with an automatic Lanczos fallback.
+MetalFX Temporal is not enabled in the public application.
 
 1. Set up [SideStore](https://sidestore.io) or another compatible sideloading
    client.
 2. In SideStore open **Sources**, tap **+** and add:
 
-   `https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json`
+   `https://raw.githubusercontent.com/tryk016/OpenGothic/codex/ios-upstream-integration/apps.json`
 
-3. Install **OpenGothic MetalFX Temporal** from the new source.
+3. Install **OpenGothic MetalFX Spatial** from the new source.
 4. In the iOS Files app open **On My iPhone/iPad → OpenGothic** and copy the
    `Data/`, `_work/` and `system/` folders from your own Gothic II:
    Night of the Raven installation.
@@ -38,7 +38,7 @@ The IPA is unsigned and must be signed by the sideloading client. Normal
 updates preserve the app's `Documents` directory, settings and saves. Do not
 uninstall an existing copy before backing up that directory.
 
-- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-metalfx-temporal)
+- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.1-spatial)
 - [Complete installation and local-build guide](docs/ios/INSTALL.md)
 
 ## Requirements
@@ -94,7 +94,7 @@ contextual combat controls, configuration and the complete validation matrix.
 
 The recommended release enables:
 
-- MetalFX Temporal with automatic Spatial and Lanczos fallback;
+- MetalFX Spatial with automatic Lanczos fallback;
 - two 512 × 512 mobile shadow maps;
 - reduced skeletal-pose work for distant, off-screen NPCs;
 - three frames in flight and direct Metal drawable rendering with a safe copy

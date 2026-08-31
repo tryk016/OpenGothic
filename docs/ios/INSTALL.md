@@ -1,6 +1,6 @@
 # Building and installing OpenGothic on iOS
 
-This guide covers the maintained MetalFX Temporal performance release,
+This guide covers the maintained MetalFX Spatial performance release,
 SideStore/AltStore sideloading and local Xcode installation. The release uses
 512 x 512 mobile shadow maps and skips full skeletal-pose work for distant,
 off-screen NPCs while preserving animation time and gameplay events.
@@ -18,16 +18,16 @@ For SideStore (recommended):
 1. Complete the one-time SideStore setup from [sidestore.io](https://sidestore.io).
 2. Open **Sources**, tap **+** and add this source URL:
 
-   `https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json`
+   `https://raw.githubusercontent.com/tryk016/OpenGothic/codex/ios-upstream-integration/apps.json`
 
-3. Open the new OpenGothic source and install **OpenGothic MetalFX Temporal**.
+3. Open the new OpenGothic source and install **OpenGothic MetalFX Spatial**.
 4. When a newer version appears, choose **Update**. Do not uninstall the old
    version first: an update using the same bundle identifier preserves game
    data, settings and saves in `Documents`.
 
 AltStore and other clients compatible with AltStore sources can use the same
 `apps.json`. The IPA can also be downloaded directly from the
-[MetalFX Temporal release](https://github.com/tryk016/OpenGothic/releases/tag/ios-metalfx-temporal)
+[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.1-spatial)
 and selected manually in the sideloading client. Free Apple-account signatures
 normally need periodic refresh; follow the selected client's current setup and
 refresh instructions.
@@ -121,10 +121,9 @@ and do not replace physical-device acceptance testing.
 
 ## Optional rendering profiles
 
-The source defaults keep optional performance features disabled so the
-conservative paths remain continuously buildable. The maintained IPA enables
-the recommended performance profile shown below. Individual options can also
-be selected explicitly when testing:
+The public iOS branch enables Spatial by default. The maintained IPA and
+`ios/build-ios.sh` also enable the recommended performance profile shown below.
+Individual options can be selected explicitly when testing:
 
 | CMake option | Purpose |
 |---|---|
@@ -133,7 +132,7 @@ be selected explicitly when testing:
 | `OPENGOTHIC_NPC_ANIMATION_CULLING` | Skip full skeletal-pose work for distant, off-screen NPCs while preserving animation events |
 | `OPENGOTHIC_NPC_DIALOG_CULLING` | Experimental aggressive dialog/cutscene mode; not enabled in the recommended profile |
 | `OPENGOTHIC_METALFX_SPATIAL` | Enable MetalFX Spatial where available |
-| `OPENGOTHIC_METALFX_TEMPORAL` | Enable MetalFX Temporal; requires Spatial for fallback |
+| `OPENGOTHIC_METALFX_TEMPORAL` | Experimental Temporal path; disabled in the maintained public build |
 | `OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS` | Bundle the verified startup shader set; enabled by default |
 
 For example:
@@ -148,7 +147,7 @@ cmake -S . -B build-ios-performance -G Xcode \
   -DOPENGOTHIC_IOS_DIRECT_DRAWABLE=ON \
   -DOPENGOTHIC_NPC_ANIMATION_CULLING=ON \
   -DOPENGOTHIC_METALFX_SPATIAL=ON \
-  -DOPENGOTHIC_METALFX_TEMPORAL=ON
+  -DOPENGOTHIC_METALFX_TEMPORAL=OFF
 ```
 
 Unsupported MetalFX paths fall back at runtime. To verify the authoritative

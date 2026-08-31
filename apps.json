@@ -1,28 +1,28 @@
 {
-  "name": "OpenGothic iOS — MetalFX Temporal (Recommended)",
-  "identifier": "opengothic.gothic2.metalfx.temporal.source",
-  "sourceURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/apps.json",
+  "name": "OpenGothic iOS (Recommended)",
+  "identifier": "opengothic.gothic2.ios.source",
+  "sourceURL": "https://raw.githubusercontent.com/tryk016/OpenGothic/codex/ios-upstream-integration/apps.json",
   "apps": [
     {
-      "name": "OpenGothic MetalFX Temporal",
+      "name": "OpenGothic MetalFX Spatial",
       "bundleIdentifier": "opengothic.gothic2",
       "developerName": "Try (engine) · iOS port",
       "subtitle": "Recommended iOS performance build",
-      "localizedDescription": "OpenGothic for iPhone and iPad with MetalFX Temporal reconstruction, automatic MetalFX Spatial and Lanczos fallback, 512 x 512 mobile shadow maps, off-screen NPC animation optimization, touch controls and physical-controller support. Requires legally owned Gothic II: Night of the Raven game data; no game assets are included.",
-      "iconURL": "https://raw.githubusercontent.com/tryk016/OpenGothic/ios-metalfx-temporal/ios/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+      "localizedDescription": "OpenGothic for iPhone and iPad with MetalFX Spatial and automatic Lanczos fallback, 512 x 512 mobile shadow maps, off-screen NPC animation optimization, touch controls and physical-controller support. Requires legally owned Gothic II: Night of the Raven game data; no game assets are included.",
+      "iconURL": "https://raw.githubusercontent.com/tryk016/OpenGothic/codex/ios-upstream-integration/ios/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
       "tintColor": "8B0000",
-      "version": "1.3.0",
-      "versionDate": "2026-08-30",
-      "versionDescription": "OpenGothic iOS 1.3.0 performance profile with MetalFX Temporal, 512 x 512 shadow maps, off-screen NPC animation optimization, complete touch controls and automatic renderer fallback.",
-      "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/OpenGothic-iOS-1.3.0-MetalFX-Temporal.ipa",
-      "size": 12048190,
+      "version": "1.3.1",
+      "versionDate": "2026-08-31",
+      "versionDescription": "MetalFX Spatial is enabled; MetalFX Temporal is disabled. Includes the maintained iOS performance profile and complete touch controls.",
+      "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.1-spatial/OpenGothic-iOS-1.3.1-MetalFX-Spatial.ipa",
+      "size": 12057394,
       "versions": [
         {
-          "version": "1.3.0",
-          "date": "2026-08-30",
-          "localizedDescription": "OpenGothic iOS 1.3.0 performance profile with MetalFX Temporal, 512 x 512 shadow maps, off-screen NPC animation optimization, complete touch controls and automatic renderer fallback.",
-          "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-metalfx-temporal/OpenGothic-iOS-1.3.0-MetalFX-Temporal.ipa",
-          "size": 12048190,
+          "version": "1.3.1",
+          "date": "2026-08-31",
+          "localizedDescription": "MetalFX Spatial is enabled; MetalFX Temporal is disabled. Includes the maintained iOS performance profile and complete touch controls.",
+          "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.1-spatial/OpenGothic-iOS-1.3.1-MetalFX-Spatial.ipa",
+          "size": 12057394,
           "minOSVersion": "15.0"
         }
       ]

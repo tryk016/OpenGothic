@@ -76,7 +76,7 @@ elseif(IOS)
   option(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE
          "Map the Gothic draw-distance menu setting to the world camera far plane" OFF)
   option(OPENGOTHIC_METALFX_SPATIAL
-         "Use MetalFX Spatial for reduced-resolution HDR scene upscaling on supported iOS devices" OFF)
+         "Use MetalFX Spatial for reduced-resolution HDR scene upscaling on supported iOS devices" ON)
   option(OPENGOTHIC_METALFX_TEMPORAL
          "Use MetalFX Temporal AA upscaling with Spatial/Lanczos fallback on supported iOS devices" OFF)
   option(OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS
