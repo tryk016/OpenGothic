@@ -57,6 +57,8 @@ elseif(IOS)
          "Mark SideStore test builds as requesting Increased Memory Limit" OFF)
   option(OPENGOTHIC_PERF_DIAGNOSTICS
          "Enable low-frequency performance and memory telemetry" OFF)
+  option(OPENGOTHIC_IOS_PERF_LAB
+         "Enable hidden runtime A/B selectors for the iOS performance lab" OFF)
   option(OPENGOTHIC_NPC_ANIMATION_CULLING
          "Skip full skeletal pose updates for distant offscreen NPCs" OFF)
   option(OPENGOTHIC_NPC_DIALOG_CULLING
@@ -122,9 +124,13 @@ elseif(IOS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
       OPENGOTHIC_IOS_INCREASED_MEMORY_REQUESTED=1)
   endif()
-  if(OPENGOTHIC_PERF_DIAGNOSTICS)
+  if(OPENGOTHIC_PERF_DIAGNOSTICS OR OPENGOTHIC_IOS_PERF_LAB)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_PERF_DIAGNOSTICS=1)
+  endif()
+  if(OPENGOTHIC_IOS_PERF_LAB)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+      OPENGOTHIC_IOS_PERF_LAB=1)
   endif()
   if(OPENGOTHIC_NPC_ANIMATION_CULLING)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
