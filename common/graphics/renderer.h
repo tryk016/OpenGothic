@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <Tempest/RenderPipeline>
 #include <Tempest/CommandBuffer>
 #include <Tempest/Matrix4x4>
@@ -23,11 +25,53 @@ class VideoWidget;
 
 class Renderer final {
   public:
+    enum class AtmosphereSkyLutCadence : uint8_t {
+      EveryFrame   = 1,
+      Every2Frames = 2,
+      Every4Frames = 4,
+      Every6Frames = 6,
+      };
+
+    enum class AtmosphereFogLqResolution : uint8_t {
+      Baseline160x90x64,
+      Medium120x68x48,
+      Low96x54x32,
+      };
+
+    struct AtmosphereQaConfig {
+      AtmosphereSkyLutCadence   skyLutCadence   = AtmosphereSkyLutCadence::EveryFrame;
+      AtmosphereFogLqResolution fogLqResolution = AtmosphereFogLqResolution::Baseline160x90x64;
+      };
+
+    struct AtmosphereQaSnapshot {
+      AtmosphereQaConfig config;
+      uint64_t           skyPrepareCalls      = 0;
+      uint64_t           skyViewLutUpdates    = 0;
+      uint64_t           skyViewLutSkips      = 0;
+      uint64_t           skyStaticLutUpdates  = 0;
+      uint64_t           fogPrepareCalls      = 0;
+      uint64_t           fogLutUpdates        = 0;
+      uint64_t           fogLutReallocations  = 0;
+      uint32_t           fogLutWidth          = 0;
+      uint32_t           fogLutHeight         = 0;
+      uint32_t           fogLutDepth          = 0;
+      bool               fogLutIsLq           = false;
+      };
+
     Renderer();
     ~Renderer();
 
     void onWorldChanged();
     bool ssaoBuffersAllocated() const;
+
+    // QA-only render controls. Change them on the render thread between frames.
+    // Defaults reproduce the production renderer exactly.
+    void                 setAtmosphereQaConfig(const AtmosphereQaConfig& config);
+    AtmosphereQaConfig   atmosphereQaConfig() const;
+    AtmosphereQaSnapshot atmosphereQaSnapshot() const;
+    void                 resetAtmosphereQaCounters();
+    bool                 setWaterReflectionModeForQa(uint8_t mode);
+    uint8_t              waterReflectionModeForQa() const;
 
     void draw(Tempest::Attachment& result, Tempest::Encoder<Tempest::CommandBuffer>& cmd, uint8_t fId,
               Tempest::VectorImage::Mesh& uiLayer, Tempest::VectorImage::Mesh& numOverlay,
@@ -49,6 +93,14 @@ class Renderer final {
       Epipolar,
       PathTrace,
       };
+    struct FogLqDimensions {
+      uint32_t width  = 160;
+      uint32_t height = 90;
+      uint32_t depth  = 64;
+      };
+
+    FogLqDimensions fogLqDimensions() const;
+    uint32_t        skyLutCadenceFrames() const;
     Tempest::Size internalResolution(Tempest::Size src) const;
     float         internalResolutionScale() const;
 
@@ -230,10 +282,26 @@ class Renderer final {
       Tempest::Sampler       sampler = Tempest::Sampler::bilinear();
 
       bool                   lutIsInitialized = false;
+      bool                   viewLutInvalidated = true;
+      uint32_t               viewLutFramesUntilUpdate = 0;
       Tempest::Attachment    transLut, multiScatLut, viewLut, viewCldLut;
       Tempest::StorageImage  cloudsLut, fogLut3D, fogLut3DMs;
       Tempest::StorageImage  occlusionLut, irradianceLut;
       } sky;
+
+    struct AtmosphereQaState {
+      std::atomic<uint8_t>  skyLutCadence  {uint8_t(AtmosphereSkyLutCadence::EveryFrame)};
+      std::atomic<uint8_t>  fogLqResolution{uint8_t(AtmosphereFogLqResolution::Baseline160x90x64)};
+      std::atomic<uint64_t> skyPrepareCalls     {0};
+      std::atomic<uint64_t> skyViewLutUpdates   {0};
+      std::atomic<uint64_t> skyViewLutSkips     {0};
+      std::atomic<uint64_t> skyStaticLutUpdates {0};
+      std::atomic<uint64_t> fogPrepareCalls     {0};
+      std::atomic<uint64_t> fogLutUpdates       {0};
+      std::atomic<uint64_t> fogLutReallocations {0};
+      } atmosphereQa;
+
+    std::atomic<uint8_t> waterReflectionQaMode{0};
 
     struct SSAO {
       Tempest::TextureFormat    aoFormat = Tempest::TextureFormat::R8;

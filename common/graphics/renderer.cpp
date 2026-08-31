@@ -131,6 +131,119 @@ bool Renderer::ssaoBuffersAllocated() const {
   return !ssao.ssaoBuf.isEmpty() && !ssao.ssaoBlur.isEmpty();
   }
 
+void Renderer::setAtmosphereQaConfig(const AtmosphereQaConfig& config) {
+  auto cadence = config.skyLutCadence;
+  switch(cadence) {
+    case AtmosphereSkyLutCadence::EveryFrame:
+    case AtmosphereSkyLutCadence::Every2Frames:
+    case AtmosphereSkyLutCadence::Every4Frames:
+    case AtmosphereSkyLutCadence::Every6Frames:
+      break;
+    default:
+      cadence = AtmosphereSkyLutCadence::EveryFrame;
+      break;
+    }
+
+  auto fogResolution = config.fogLqResolution;
+  switch(fogResolution) {
+    case AtmosphereFogLqResolution::Baseline160x90x64:
+    case AtmosphereFogLqResolution::Medium120x68x48:
+    case AtmosphereFogLqResolution::Low96x54x32:
+      break;
+    default:
+      fogResolution = AtmosphereFogLqResolution::Baseline160x90x64;
+      break;
+    }
+
+  const auto oldCadence = AtmosphereSkyLutCadence(atmosphereQa.skyLutCadence.load(std::memory_order_relaxed));
+  const auto oldFog      = AtmosphereFogLqResolution(atmosphereQa.fogLqResolution.load(std::memory_order_relaxed));
+  atmosphereQa.skyLutCadence.store(uint8_t(cadence), std::memory_order_relaxed);
+  atmosphereQa.fogLqResolution.store(uint8_t(fogResolution), std::memory_order_relaxed);
+
+  if(oldCadence!=cadence) {
+    sky.viewLutInvalidated          = true;
+    sky.viewLutFramesUntilUpdate    = 0;
+    }
+
+  if(oldFog!=fogResolution && sky.quality==VolumetricLQ) {
+    Resources::device().waitIdle();
+    resetSkyFog();
+    }
+  }
+
+Renderer::AtmosphereQaConfig Renderer::atmosphereQaConfig() const {
+  AtmosphereQaConfig ret;
+  ret.skyLutCadence = AtmosphereSkyLutCadence(atmosphereQa.skyLutCadence.load(std::memory_order_relaxed));
+  ret.fogLqResolution = AtmosphereFogLqResolution(atmosphereQa.fogLqResolution.load(std::memory_order_relaxed));
+  return ret;
+  }
+
+Renderer::AtmosphereQaSnapshot Renderer::atmosphereQaSnapshot() const {
+  AtmosphereQaSnapshot ret;
+  ret.config                  = atmosphereQaConfig();
+  ret.skyPrepareCalls         = atmosphereQa.skyPrepareCalls.load(std::memory_order_relaxed);
+  ret.skyViewLutUpdates       = atmosphereQa.skyViewLutUpdates.load(std::memory_order_relaxed);
+  ret.skyViewLutSkips         = atmosphereQa.skyViewLutSkips.load(std::memory_order_relaxed);
+  ret.skyStaticLutUpdates     = atmosphereQa.skyStaticLutUpdates.load(std::memory_order_relaxed);
+  ret.fogPrepareCalls         = atmosphereQa.fogPrepareCalls.load(std::memory_order_relaxed);
+  ret.fogLutUpdates           = atmosphereQa.fogLutUpdates.load(std::memory_order_relaxed);
+  ret.fogLutReallocations     = atmosphereQa.fogLutReallocations.load(std::memory_order_relaxed);
+  ret.fogLutWidth             = uint32_t(sky.fogLut3D.w());
+  ret.fogLutHeight            = uint32_t(sky.fogLut3D.h());
+  ret.fogLutDepth             = uint32_t(sky.fogLut3D.d());
+  ret.fogLutIsLq              = sky.quality==VolumetricLQ;
+  return ret;
+  }
+
+void Renderer::resetAtmosphereQaCounters() {
+  atmosphereQa.skyPrepareCalls.store(0, std::memory_order_relaxed);
+  atmosphereQa.skyViewLutUpdates.store(0, std::memory_order_relaxed);
+  atmosphereQa.skyViewLutSkips.store(0, std::memory_order_relaxed);
+  atmosphereQa.skyStaticLutUpdates.store(0, std::memory_order_relaxed);
+  atmosphereQa.fogPrepareCalls.store(0, std::memory_order_relaxed);
+  atmosphereQa.fogLutUpdates.store(0, std::memory_order_relaxed);
+  atmosphereQa.fogLutReallocations.store(0, std::memory_order_relaxed);
+  }
+
+bool Renderer::setWaterReflectionModeForQa(uint8_t mode) {
+  if(mode>1)
+    return false;
+  waterReflectionQaMode.store(mode,std::memory_order_relaxed);
+  return true;
+  }
+
+uint8_t Renderer::waterReflectionModeForQa() const {
+  return waterReflectionQaMode.load(std::memory_order_relaxed);
+  }
+
+Renderer::FogLqDimensions Renderer::fogLqDimensions() const {
+  const auto mode = AtmosphereFogLqResolution(atmosphereQa.fogLqResolution.load(std::memory_order_relaxed));
+  switch(mode) {
+    case AtmosphereFogLqResolution::Medium120x68x48:
+      return {120,68,48};
+    case AtmosphereFogLqResolution::Low96x54x32:
+      return {96,54,32};
+    case AtmosphereFogLqResolution::Baseline160x90x64:
+    default:
+      return {160,90,64};
+    }
+  }
+
+uint32_t Renderer::skyLutCadenceFrames() const {
+  const auto cadence = atmosphereQa.skyLutCadence.load(std::memory_order_relaxed);
+  switch(AtmosphereSkyLutCadence(cadence)) {
+    case AtmosphereSkyLutCadence::Every2Frames:
+      return 2;
+    case AtmosphereSkyLutCadence::Every4Frames:
+      return 4;
+    case AtmosphereSkyLutCadence::Every6Frames:
+      return 6;
+    case AtmosphereSkyLutCadence::EveryFrame:
+    default:
+      return 1;
+    }
+  }
+
 void Renderer::setupSettings() {
   settings.zEnvMappingEnabled = Gothic::settingsGetI("ENGINE","zEnvMappingEnabled")!=0;
   settings.zCloudShadowScale  = Gothic::settingsGetI("ENGINE","zCloudShadowScale") !=0;
@@ -285,6 +398,8 @@ void Renderer::togglePathtrace() {
 
 void Renderer::onWorldChanged() {
   sky.lutIsInitialized = false;
+  sky.viewLutInvalidated       = true;
+  sky.viewLutFramesUntilUpdate = 0;
 #if defined(OPENGOTHIC_METALFX_TEMPORAL)
   resetTemporalHistory();
 #endif
@@ -640,34 +755,45 @@ void Renderer::resetShadowmap() {
 void Renderer::resetSkyFog() {
   auto& device = Resources::device();
 
+  Quality desiredQuality = Quality::VolumetricLQ;
   {
-    auto q = Quality::VolumetricLQ;
     if(!settings.zFogRadial) {
-      q = Quality::VolumetricLQ;
+      desiredQuality = Quality::VolumetricLQ;
       } else {
-      q = Quality::VolumetricHQ;
-      // q = Quality::Epipolar;
+      desiredQuality = Quality::VolumetricHQ;
+      // desiredQuality = Quality::Epipolar;
       }
 
     if(skyPathTrace)
-      q = PathTrace;
-
-    if(sky.quality==q) {
-      return;
-      }
-
-    sky.quality = q;
+      desiredQuality = PathTrace;
   }
+
+  const auto lqSize = fogLqDimensions();
+  const bool qualityChanged = sky.quality!=desiredQuality;
+  const bool lqSizeChanged = desiredQuality==VolumetricLQ &&
+                             (sky.fogLut3D.isEmpty() ||
+                              uint32_t(sky.fogLut3D.w())!=lqSize.width ||
+                              uint32_t(sky.fogLut3D.h())!=lqSize.height ||
+                              uint32_t(sky.fogLut3D.d())!=lqSize.depth);
+  if(!qualityChanged && !lqSizeChanged)
+    return;
+
+  sky.quality = desiredQuality;
 
   Resources::recycle(std::move(sky.fogLut3D));
   Resources::recycle(std::move(sky.fogLut3DMs));
+  atmosphereQa.fogLutReallocations.fetch_add(1, std::memory_order_relaxed);
 
-  sky.lutIsInitialized = false;
+  if(qualityChanged) {
+    sky.lutIsInitialized         = false;
+    sky.viewLutInvalidated       = true;
+    sky.viewLutFramesUntilUpdate = 0;
+    }
 
   switch(sky.quality) {
     case None:
     case VolumetricLQ:
-      sky.fogLut3D   = device.image3d(sky.lutRGBAFormat, 160, 90, 64);
+      sky.fogLut3D = device.image3d(sky.lutRGBAFormat, lqSize.width, lqSize.height, lqSize.depth);
       break;
     case VolumetricHQ:
       // fogLut and oclussion are decupled
@@ -685,10 +811,14 @@ void Renderer::resetSkyFog() {
 
 void Renderer::prepareSky(Tempest::Encoder<Tempest::CommandBuffer>& cmd, WorldView& wview) {
   auto& scene   = wview.sceneGlobals();
+  atmosphereQa.skyPrepareCalls.fetch_add(1, std::memory_order_relaxed);
 
   cmd.setDebugMarker("Sky LUT");
+  bool staticLutsUpdated = false;
   if(!sky.lutIsInitialized) {
     sky.lutIsInitialized = true;
+    staticLutsUpdated = true;
+    atmosphereQa.skyStaticLutUpdates.fetch_add(1, std::memory_order_relaxed);
 
     cmd.setFramebuffer({});
     cmd.setBinding(0, sky.cloudsLut);
@@ -717,6 +847,14 @@ void Renderer::prepareSky(Tempest::Encoder<Tempest::CommandBuffer>& cmd, WorldVi
     cmd.draw(nullptr, 0, 3);
     }
 
+  const bool updateViewLuts = staticLutsUpdated || sky.viewLutInvalidated ||
+                              sky.viewLutFramesUntilUpdate==0;
+  if(!updateViewLuts) {
+    --sky.viewLutFramesUntilUpdate;
+    atmosphereQa.skyViewLutSkips.fetch_add(1, std::memory_order_relaxed);
+    return;
+    }
+
   auto sz = Vec2(float(sky.viewLut.w()), float(sky.viewLut.h()));
   cmd.setFramebuffer({{sky.viewLut, Tempest::Discard, Tempest::Preserve}});
   cmd.setBinding(0, scene.uboGlobal[SceneGlobals::V_Main]);
@@ -738,6 +876,10 @@ void Renderer::prepareSky(Tempest::Encoder<Tempest::CommandBuffer>& cmd, WorldVi
   cmd.setPushData(&sz, sizeof(sz));
   cmd.setPipeline(shaders.skyViewCldLut);
   cmd.draw(nullptr, 0, 3);
+
+  sky.viewLutInvalidated = false;
+  sky.viewLutFramesUntilUpdate = skyLutCadenceFrames()-1;
+  atmosphereQa.skyViewLutUpdates.fetch_add(1, std::memory_order_relaxed);
   }
 
 void Renderer::draw(Attachment& result, Encoder<CommandBuffer>& cmd, uint8_t fId,
@@ -1960,6 +2102,9 @@ void Renderer::drawGWater(Encoder<CommandBuffer>& cmd, WorldView& view) {
   }
 
 void Renderer::drawReflections(Encoder<CommandBuffer>& cmd, const WorldView& wview) {
+  if(waterReflectionModeForQa()==1)
+    return;
+
   auto& pso = settings.zEnvMappingEnabled ? shaders.waterReflectionSSR : shaders.waterReflection;
 
   cmd.setDebugMarker("Reflections");
@@ -2163,6 +2308,7 @@ void Renderer::prepareSSAO(Encoder<CommandBuffer>& cmd, WorldView& wview) {
 void Renderer::prepareFog(Encoder<Tempest::CommandBuffer>& cmd, WorldView& wview) {
   auto& scene  = wview.sceneGlobals();
   auto& device = Resources::device();
+  atmosphereQa.fogPrepareCalls.fetch_add(1, std::memory_order_relaxed);
 
   cmd.setDebugMarker("Fog-LUTs");
   if(sky.quality!=PathTrace) {
@@ -2177,6 +2323,7 @@ void Renderer::prepareFog(Encoder<Tempest::CommandBuffer>& cmd, WorldView& wview
       cmd.setBinding(5, sky.fogLut3DMs);
     cmd.setPipeline(shader);
     cmd.dispatchThreads(uint32_t(sky.fogLut3D.w()), uint32_t(sky.fogLut3D.h()));
+    atmosphereQa.fogLutUpdates.fetch_add(1, std::memory_order_relaxed);
     }
 
   if(settings.vsmEnabled && !settings.pathTraceEnabled && (sky.quality==VolumetricHQ || sky.quality==Epipolar)) {
