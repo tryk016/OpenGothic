@@ -1,0 +1,68 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'opengothic.gothic2'
+    compileSdk 34
+    ndkVersion '26.3.11579264'
+
+    // Exposes the GameActivity AAR's native code (game-activity CMake package +
+    // headers) to our CMake build so find_package(game-activity CONFIG) resolves.
+    buildFeatures {
+        prefab true
+    }
+
+    defaultConfig {
+        applicationId 'opengothic.gothic2'
+        minSdk 26
+        targetSdk 34
+        versionCode project.hasProperty('buildNum') ? project.buildNum.toInteger() : 1
+        versionName "1.0.${project.hasProperty('buildNum') ? project.buildNum : '0'}"
+        // arm64-v8a = real devices (Helio G99 etc.); x86_64 = fast desktop emulator.
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared', '-DANDROID=ON'
+                // During migration, build only the GameActivity shared library.
+                // The full OpenGothic core is linked back in at the boot-to-menu gate.
+                targets 'Gothic2Notr'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path '../../CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../keystore/opengothic.jks')
+            storePassword 'opengothic'
+            keyAlias 'opengothic'
+            keyPassword 'opengothic'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    implementation 'androidx.games:games-activity:3.0.5'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}
