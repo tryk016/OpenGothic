@@ -26,9 +26,9 @@ CI migration builds are signed with the existing development key so they can
 update an installed test build without deleting game data. Migration version
 codes start at 100000, above the legacy repository's published builds, and add
 the workflow run number so every successful CI build remains upgradeable.
-CI migration builds remain workflow artifacts. The public `latest-android`
-release stays marked as a non-working test build until the memory,
-compatibility, and performance gates are complete.
+CI migration builds remain workflow artifacts. This repository does not yet
+publish or update a public `latest-android` release; release publishing stays
+disabled until the memory, compatibility, and performance gates are complete.
 
 The application is fixed to landscape. A full game-data installation contains
 all three original directories:
