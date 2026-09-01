@@ -150,6 +150,7 @@ Gothic::Gothic() {
   defaults->set("RENDERER_D3D", "zFogRadial", 1); // sunshafts
   defaults->set("ENGINE",       "zEnvMappingEnabled", 1); // reflections
   defaults->set("ENGINE",       "zCloudShadowScale", gpu.type==Tempest::DeviceType::Discrete); // ssao
+  defaults->set("ENGINE",       "shadowResolution", 2048);
   defaults->set("INTERNAL",     "vidResIndex", 0); // full-res
 
   defaults->set("VIDEO", "zVidBrightness", 0.5f);

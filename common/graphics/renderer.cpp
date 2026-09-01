@@ -141,6 +141,10 @@ void Renderer::setupSettings() {
   settings.vidResIndex = Gothic::inst().settingsGetF("INTERNAL","vidResIndex");
   settings.aaEnabled   = (Gothic::options().aaPreset>0) && (settings.vidResIndex==0);
 
+  const int shadowResolution = Gothic::inst().settingsGetI("ENGINE", "shadowResolution");
+  settings.shadowResolution = uint32_t(std::clamp(shadowResolution, 128, 4096));
+  Log::i("Shadow map resolution = ", settings.shadowResolution);
+
   // direct lighting
   if(settings.rtsmEnabled)
     shadow.directLightPso = &shaders.rtsmDirectLight;
