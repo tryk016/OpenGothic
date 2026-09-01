@@ -3,6 +3,7 @@
 #include <Tempest/RenderPipeline>
 #include <Tempest/Shader>
 #include <Tempest/Device>
+#include <exception>
 #include <future>
 #include <list>
 
@@ -67,9 +68,6 @@ class Shaders {
     Tempest::RenderPipeline  waterReflection, waterReflectionSSR;
 
     Tempest::RenderPipeline  tonemapping, tonemappingUpscale;
-#if defined(OPENGOTHIC_METALFX_TEMPORAL)
-    Tempest::RenderPipeline  metalFxMotion;
-#endif
 
     // AA
     Tempest::ComputePipeline cmaa2EdgeColor2x2Presets[uint32_t(AaPreset::PRESETS_COUNT)];
@@ -155,6 +153,12 @@ class Shaders {
     const Tempest::RenderPipeline* materialPipeline(const Material& desc, DrawCommands::Type t, PipelineType pt, bool bindless) const;
 
   private:
+    enum class CompilerState : uint8_t {
+      Pending,
+      Ready,
+      Failed,
+      };
+
     struct Entry {
       Tempest::RenderPipeline pipeline;
       Material::AlphaFunc     alpha        = Material::Solid;
@@ -166,6 +170,7 @@ class Shaders {
 
     void                     compileKeyShaders();
     void                     compileShaders();
+    void                     completeCompiler();
 
     Tempest::RenderPipeline  postEffect(std::string_view name);
     Tempest::RenderPipeline  postEffect(std::string_view name, Tempest::RenderState::ZTestMode ztest);
@@ -179,5 +184,7 @@ class Shaders {
     static Shaders* instance;
 
     std::shared_future<void> deferredCompilation;
+    CompilerState              compilerState = CompilerState::Pending;
+    std::exception_ptr         compilerError;
     mutable std::list<Entry> materials;
   };

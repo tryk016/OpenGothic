@@ -59,8 +59,6 @@ elseif(IOS)
          "Enable low-frequency performance and memory telemetry" OFF)
   option(OPENGOTHIC_NPC_ANIMATION_CULLING
          "Skip full skeletal pose updates for distant offscreen NPCs" OFF)
-  option(OPENGOTHIC_NPC_DIALOG_CULLING
-         "Keep distant NPC pose culling active during dialogs and cutscenes" OFF)
   option(OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT
          "Use three frame-resource and Metal swapchain slots on iOS" OFF)
   set(OPENGOTHIC_IOS_METAL_SHADER_CACHE_SIZE "16" CACHE STRING
@@ -71,14 +69,8 @@ elseif(IOS)
   endif()
   option(OPENGOTHIC_IOS_DIRECT_DRAWABLE
          "Render directly into CAMetalDrawable on iOS, with automatic copy fallback" OFF)
-  option(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000
-         "Limit the iOS world camera far plane to 60000 Gothic units" OFF)
-  option(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE
-         "Map the Gothic draw-distance menu setting to the world camera far plane" OFF)
   option(OPENGOTHIC_METALFX_SPATIAL
          "Use MetalFX Spatial for reduced-resolution HDR scene upscaling on supported iOS devices" ON)
-  option(OPENGOTHIC_METALFX_TEMPORAL
-         "Use MetalFX Temporal AA upscaling with Spatial/Lanczos fallback on supported iOS devices" OFF)
   option(OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS
          "Bundle a small precompiled Metal library for the first iOS menu/video shaders" ON)
   # App version. CI passes -DOPENGOTHIC_IOS_VERSION=1.0.<run> so the bundle's
@@ -130,13 +122,6 @@ elseif(IOS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
       OPENGOTHIC_NPC_ANIMATION_CULLING=1)
   endif()
-  if(OPENGOTHIC_NPC_DIALOG_CULLING)
-    if(NOT OPENGOTHIC_NPC_ANIMATION_CULLING)
-      message(FATAL_ERROR "OPENGOTHIC_NPC_DIALOG_CULLING requires OPENGOTHIC_NPC_ANIMATION_CULLING")
-    endif()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      OPENGOTHIC_NPC_DIALOG_CULLING=1)
-  endif()
   if(OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT=1)
@@ -149,28 +134,9 @@ elseif(IOS)
     target_compile_definitions(Gothic2Notr PRIVATE
       OPENGOTHIC_IOS_DIRECT_DRAWABLE=1)
   endif()
-  if(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000 AND
-     OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
-    message(FATAL_ERROR "Fixed and dynamic world far-plane experiments are mutually exclusive")
-  endif()
-  if(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000=1)
-  endif()
-  if(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-      OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE=1)
-  endif()
   if(OPENGOTHIC_METALFX_SPATIAL)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
       OPENGOTHIC_METALFX_SPATIAL=1)
-  endif()
-  if(OPENGOTHIC_METALFX_TEMPORAL)
-    if(NOT OPENGOTHIC_METALFX_SPATIAL)
-      message(FATAL_ERROR "OPENGOTHIC_METALFX_TEMPORAL requires OPENGOTHIC_METALFX_SPATIAL for its fallback path")
-    endif()
-    target_compile_definitions(${PROJECT_NAME} PUBLIC
-      OPENGOTHIC_METALFX_TEMPORAL=1)
   endif()
   # App icon: Xcode's actool compiles this asset catalog on the CI runner and
   # injects the CFBundleIcons keys, so the icon shows on the home screen.
