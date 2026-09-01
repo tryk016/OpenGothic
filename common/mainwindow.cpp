@@ -292,6 +292,10 @@ void MainWindow::resizeEvent(SizeEvent&) {
   for(auto& i:fence)
     i.wait();
   swapchain.reset();
+  if(swapchain.w()==0 || swapchain.h()==0) {
+    dMouse = Point();
+    return;
+    }
   if(auto camera = Gothic::inst().camera())
     camera->setViewport(swapchain.w(),swapchain.h());
 
