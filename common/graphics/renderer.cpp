@@ -139,7 +139,24 @@ void Renderer::setupSettings() {
     settings.moonSize = 400;
 
   settings.vidResIndex = Gothic::inst().settingsGetF("INTERNAL","vidResIndex");
-  settings.aaEnabled   = (Gothic::options().aaPreset>0) && (settings.vidResIndex==0);
+  const float configuredScale = Gothic::inst().settingsGetF("INTERNAL", "resolutionScale");
+  if(configuredScale>0.f) {
+    settings.resolutionScale = std::clamp(configuredScale, 0.25f, 1.f);
+    }
+  else if(settings.vidResIndex==0) {
+    settings.resolutionScale = 1.f;
+    }
+  else if(settings.vidResIndex==1) {
+    settings.resolutionScale = 0.75f;
+    }
+  else {
+    settings.resolutionScale = 0.5f;
+    }
+
+  settings.upscaleFilter = uint8_t(std::clamp(Gothic::inst().settingsGetI("INTERNAL", "upscaleFilter"), 0, 1));
+  settings.aaEnabled     = (Gothic::options().aaPreset>0) && (settings.resolutionScale>=1.f);
+  Log::i("Internal resolution scale = ", settings.resolutionScale,
+         " upscale filter = ", settings.upscaleFilter==0 ? "Lanczos" : "bilinear");
 
   const int shadowResolution = Gothic::inst().settingsGetI("ENGINE", "shadowResolution");
   settings.shadowResolution = uint32_t(std::clamp(shadowResolution, 128, 4096));
@@ -749,10 +766,13 @@ void Renderer::drawTonemapping(Attachment& result, Encoder<CommandBuffer>& cmd, 
   if(mul>0)
     p.mul = mul;
 
-  auto& pso = (settings.vidResIndex==0) ? shaders.tonemapping : shaders.tonemappingUpscale;
+  const bool upscale  = settings.resolutionScale<1.f;
+  const bool bilinear = upscale && settings.upscaleFilter==1;
+  auto& pso = (!upscale || bilinear) ? shaders.tonemapping : shaders.tonemappingUpscale;
   cmd.setFramebuffer({ {result, Tempest::Discard, Tempest::Preserve} });
   cmd.setBinding(0, wview.sceneGlobals().uboGlobal[SceneGlobals::V_Main]);
-  cmd.setBinding(1, sceneLinear, Sampler::nearest(ClampMode::ClampToEdge)); // Lanczos upscale requires nearest sampling
+  cmd.setBinding(1, sceneLinear, bilinear ? Sampler::bilinear(ClampMode::ClampToEdge)
+                                          : Sampler::nearest(ClampMode::ClampToEdge));
   cmd.setPushData(p);
   cmd.setPipeline(pso);
   cmd.draw(nullptr, 0, 3);
@@ -800,10 +820,13 @@ void Renderer::drawCMAA2(Tempest::Attachment& result, Tempest::Encoder<Tempest::
   if(mul>0)
     p.mul = mul;
 
-  auto& psoTone = (settings.vidResIndex==0) ? shaders.tonemapping : shaders.tonemappingUpscale;
+  const bool upscale  = settings.resolutionScale<1.f;
+  const bool bilinear = upscale && settings.upscaleFilter==1;
+  auto& psoTone = (!upscale || bilinear) ? shaders.tonemapping : shaders.tonemappingUpscale;
   cmd.setFramebuffer({{result, Tempest::Discard, Tempest::Preserve}});
   cmd.setBinding(0, wview.sceneGlobals().uboGlobal[SceneGlobals::V_Main]);
-  cmd.setBinding(1, sceneLinear, Sampler::nearest());
+  cmd.setBinding(1, sceneLinear, bilinear ? Sampler::bilinear(ClampMode::ClampToEdge)
+                                          : Sampler::nearest(ClampMode::ClampToEdge));
   cmd.setPushData(&p, sizeof(p));
   cmd.setPipeline(psoTone);
   cmd.draw(nullptr, 0, 3);
@@ -2716,18 +2739,14 @@ Tempest::Attachment Renderer::screenshoot(uint8_t frameId) {
   }
 
 float Renderer::internalResolutionScale() const {
-  if(settings.vidResIndex==0)
-    return 1;
-  if(settings.vidResIndex==1)
-    return 0.75;
-  return 0.5;
+  return settings.resolutionScale;
   }
 
 Size Renderer::internalResolution(Tempest::Size src) const {
-  if(settings.vidResIndex==0)
-     return src;
-  if(settings.vidResIndex==1)
-    return Size(3*src.w/4, 3*src.h/4);
-  return Size(src.w/2, src.h/2);
+  const float scale = internalResolutionScale();
+  if(scale>=1.f)
+    return src;
+  return Size(std::max<uint32_t>(1, uint32_t(float(src.w)*scale + 0.5f)),
+              std::max<uint32_t>(1, uint32_t(float(src.h)*scale + 0.5f)));
   }
 
