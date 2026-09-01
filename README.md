@@ -38,7 +38,7 @@ The IPA is unsigned and must be signed by the sideloading client. Normal
 updates preserve the app's `Documents` directory, settings and saves. Do not
 uninstall an existing copy before backing up that directory.
 
-- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.1-spatial)
+- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.2-spatial)
 - [Complete installation and local-build guide](docs/ios/INSTALL.md)
 
 ## Requirements

@@ -27,7 +27,7 @@ For SideStore (recommended):
 
 AltStore and other clients compatible with AltStore sources can use the same
 `apps.json`. The IPA can also be downloaded directly from the
-[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.1-spatial)
+[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.2-spatial)
 and selected manually in the sideloading client. Free Apple-account signatures
 normally need periodic refresh; follow the selected client's current setup and
 refresh instructions.
