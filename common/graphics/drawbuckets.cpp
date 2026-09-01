@@ -80,8 +80,9 @@ void DrawBuckets::updateBindlessArrays() {
   std::vector<const Tempest::Texture2d*>     tex;
   std::vector<const Tempest::StorageBuffer*> vbo, ibo;
   std::vector<const Tempest::StorageBuffer*> morphId, morph;
+  const auto*                                fallbackTex = &Resources::fallbackTexture();
   for(auto& i:bucketsCpu) {
-    tex.push_back(i.mat.tex);
+    tex.push_back(i.mat.tex!=nullptr ? i.mat.tex : fallbackTex);
     if(i.staticMesh!=nullptr) {
       ibo    .push_back(&i.staticMesh->ibo8);
       vbo    .push_back(&i.staticMesh->vbo);
@@ -96,7 +97,10 @@ void DrawBuckets::updateBindlessArrays() {
     }
 
   // avoid shader linking stutter in vulkan
-  tex    .resize(roundup(tex.size()));
+  // Vulkan only permits null image descriptors when the optional
+  // nullDescriptor feature is enabled. Padding is never sampled, so keep the
+  // array valid on mobile drivers by pointing it at the resident fallback.
+  tex    .resize(roundup(tex.size()),fallbackTex);
   vbo    .resize(roundup(vbo.size()));
   ibo    .resize(roundup(ibo.size()));
   morphId.resize(roundup(morphId.size()));

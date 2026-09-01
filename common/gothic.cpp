@@ -39,7 +39,14 @@ static bool hasMeshShader() {
 
 static bool hasBindless() {
   const auto& p = Resources::device().properties();
-  if(p.descriptors.nonUniformIndexing && p.descriptors.maxTexture>=65000 && p.descriptors.maxStorage>=65000)
+  constexpr uint32_t bucketCapacity = 65000;
+  constexpr uint32_t storageArrays  = 4; // ibo, vbo, morphId and morph
+  constexpr uint32_t fixedStorage   = 3; // instance, payload and bucket
+  constexpr uint32_t storageBudget  = storageArrays*bucketCapacity + fixedStorage;
+  if(p.descriptors.nonUniformIndexing &&
+     p.descriptors.maxTexture>=bucketCapacity &&
+     p.descriptors.maxStorageBuffers>=bucketCapacity &&
+     p.descriptors.maxResources>=storageBudget)
     return true;
   return false;
   }
