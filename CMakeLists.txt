@@ -11,9 +11,18 @@ set(CMAKE_RELWITHDEBINFO_POSTFIX "")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_SKIP_RPATH ON)
 
-add_library(${PROJECT_NAME} STATIC)
-add_executable(Gothic2Notr)
-add_executable(Spacer)
+if(ANDROID)
+  # First-light deliberately proves the platform layer before compiling the
+  # whole game. Keep the core target available for the next migration stage,
+  # but outside Android's default target graph until Gothic2Notr links it.
+  add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL)
+  # GameActivity loads this target with System.loadLibrary("Gothic2Notr").
+  add_library(Gothic2Notr SHARED)
+else()
+  add_library(${PROJECT_NAME} STATIC)
+  add_executable(Gothic2Notr)
+  add_executable(Spacer)
+endif()
 
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
@@ -31,7 +40,7 @@ if(NOT MSVC)
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.1" AND NOT APPLE AND NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation)
   endif()
-  if(UNIX)
+  if(UNIX AND NOT ANDROID)
     # -rdynamic is needed to allow obtaining meaningful backtraces
     target_link_options(${PROJECT_NAME} PRIVATE -rdynamic)
   endif()
@@ -61,6 +70,12 @@ elseif(IOS)
     MACOSX_BUNDLE_BUNDLE_VERSION 1
     MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
     XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer")
+elseif(ANDROID)
+  find_package(game-activity REQUIRED CONFIG)
+  # main_android.cpp initializes Tempest's Android backend. The migration API
+  # is internal to Tempest and intentionally is not part of its public include
+  # directory yet.
+  target_include_directories(Gothic2Notr PRIVATE lib/Tempest/Engine)
 elseif(APPLE)
   enable_language(OBJCXX)
 endif()
@@ -85,7 +100,9 @@ add_subdirectory(shader)
 target_link_libraries(${PROJECT_NAME} GothicShaders)
 
 # editor icons and such
-add_subdirectory(spacer/assets)
+if(NOT ANDROID)
+  add_subdirectory(spacer/assets)
+endif()
 
 include_directories("common")
 
@@ -100,6 +117,16 @@ endif()
 
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} shlwapi DbgHelp)
+elseif(ANDROID)
+  # GameActivity's JNI entry points are referenced from Java, not native code.
+  # Keep the complete static glue archive in release builds using
+  # --gc-sections, otherwise initializeNativeCode is stripped at link time.
+  target_link_libraries(Gothic2Notr PRIVATE
+    -Wl,--whole-archive
+    game-activity::game-activity_static
+    -Wl,--no-whole-archive
+    android
+    log)
 elseif(UNIX)
   target_link_libraries(${PROJECT_NAME} -lpthread -ldl)
 endif()
@@ -194,13 +221,20 @@ if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
 endif()
 
 # the game
-target_sources(Gothic2Notr PRIVATE game/main.cpp icon.rc)
-target_link_libraries(Gothic2Notr PRIVATE OpenGothic)
+if(ANDROID)
+  target_sources(Gothic2Notr PRIVATE game/main_android.cpp)
+  target_link_libraries(Gothic2Notr PRIVATE Tempest)
+else()
+  target_sources(Gothic2Notr PRIVATE game/main.cpp icon.rc)
+  target_link_libraries(Gothic2Notr PRIVATE OpenGothic)
+endif()
 
 # editor
-target_sources(Spacer PRIVATE ${SPACER_SOURCES} spacer/main.cpp)
-target_include_directories(Spacer PRIVATE "spacer")
-target_link_libraries(Spacer PRIVATE OpenGothic SpacerAssets)
+if(NOT ANDROID)
+  target_sources(Spacer PRIVATE ${SPACER_SOURCES} spacer/main.cpp)
+  target_include_directories(Spacer PRIVATE "spacer")
+  target_link_libraries(Spacer PRIVATE OpenGothic SpacerAssets)
+endif()
 
 # installation
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
