@@ -194,6 +194,7 @@ class Gothic final {
     uint32_t                              messageTime   (std::string_view id) const;
 
     static std::u16string                 nestedPath(const std::initializer_list<const char16_t*> &name, Tempest::Dir::FileType type);
+    static std::u16string                 userPath(std::string_view name);
     std::unique_ptr<zenkit::DaedalusVm>   createPhoenixVm(std::string_view datFile, const ScriptLang lang = ScriptLang::NONE);
     zenkit::DaedalusScript                loadScript(std::string_view datFile, const ScriptLang lang);
     void                                  setupCommonScriptClasses(zenkit::DaedalusScript &sc);

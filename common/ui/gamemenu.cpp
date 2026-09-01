@@ -2,7 +2,6 @@
 
 #include <Tempest/Painter>
 #include <Tempest/Log>
-#include <Tempest/TextCodec>
 #include <Tempest/Dialog>
 
 #include <algorithm>
@@ -1121,7 +1120,7 @@ bool GameMenu::execLoadGame(const GameMenu::Item &item) {
     return false;
 
   string_frm fname("save_slot_",int(id),".sav");
-  if(!FileUtil::exists(TextCodec::toUtf16(fname.c_str())))
+  if(!FileUtil::exists(Gothic::userPath(fname)))
     return false;
   Gothic::inst().load(fname);
   return true;
@@ -1191,14 +1190,15 @@ void GameMenu::updateSavTitle(GameMenu::Item& sel) {
   char fname[64]={};
   std::snprintf(fname,sizeof(fname)-1,"save_slot_%d.sav",int(id));
 
-  if(!FileUtil::exists(TextCodec::toUtf16(fname))) {
+  const auto path = Gothic::userPath(fname);
+  if(!FileUtil::exists(path)) {
     sel.handle->text[0] = "---";
     return;
     }
 
   SaveGameHeader hdr;
   try {
-    RFile     fin(fname);
+    RFile     fin(path);
     Serialize reader(fin);
     reader.setEntry("header");
     reader.read(hdr);
@@ -1256,7 +1256,7 @@ bool GameMenu::implUpdateSavThumb(GameMenu::Item& sel) {
   char fname[64]={};
   std::snprintf(fname,sizeof(fname)-1,"save_slot_%d.sav",int(id));
 
-  if(!FileUtil::exists(TextCodec::toUtf16(fname)))
+  if(!FileUtil::exists(Gothic::userPath(fname)))
     return false;
 
   const SaveGameHeader& hdr = sel.savHdr;

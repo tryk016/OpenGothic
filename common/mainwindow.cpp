@@ -1532,9 +1532,10 @@ void MainWindow::loadGame(std::string_view slot) {
     }
 
   Gothic::inst().setBenchmarkMode(Benchmark::None);
-  Gothic::inst().startLoad("LOADING.TGA",[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
+  auto path = Gothic::userPath(slot);
+  Gothic::inst().startLoad("LOADING.TGA",[path=std::move(path)](std::unique_ptr<GameSession>&& game){
     game = nullptr; // clear world-memory now
-    Tempest::RFile file(slot);
+    Tempest::RFile file(path);
     Serialize      s(file);
     std::unique_ptr<GameSession> w(new GameSession(s));
     return w;
@@ -1619,16 +1620,17 @@ void MainWindow::saveGame(std::string_view slot, std::string_view name) {
 void MainWindow::startPendingSave(Pixmap&& preview) {
   auto slot   = std::move(pendingSave.slot);
   auto name   = std::move(pendingSave.name);
+  auto path   = Gothic::userPath(slot);
   pendingSave.reset();
 
   // Clear the local state before allocations or serialization can throw.
   auto screen = std::make_shared<Pixmap>(std::move(preview));
 
   Gothic::inst().startSave(Texture2d(),
-    [slot=std::move(slot),name=std::move(name),screen=std::move(screen)](std::unique_ptr<GameSession>&& game){
+    [path=std::move(path),name=std::move(name),screen=std::move(screen)](std::unique_ptr<GameSession>&& game){
       if(!game)
         return std::move(game);
-      Tempest::WFile f(slot);
+      Tempest::WFile f(path);
       Serialize      s(f);
       game->save(s,name,*screen);
       return std::move(game);

@@ -110,10 +110,11 @@ Gothic::Gothic() {
   wrldDef = CommandLine::inst().wrldDef;
 
   baseIniFile.reset(new IniFile(nestedPath({u"system",u"Gothic.ini"},Dir::FT_File)));
+  const auto userIniPath = userPath("Gothic.ini");
 #if defined(__IOS__)
-  const bool hasUserIni = FileUtil::exists(std::u16string(u"Gothic.ini"));
+  const bool hasUserIni = FileUtil::exists(userIniPath);
 #endif
-  iniFile.reset(new IniFile(u"Gothic.ini"));
+  iniFile.reset(new IniFile(userIniPath));
 #if defined(__IOS__)
   constexpr int iosProfileVersion = 4;
   const int     oldIosProfileVersion = iniFile->getI("INTERNAL","iosProfileVersion",0);
@@ -1028,6 +1029,14 @@ std::unique_ptr<DocumentMenu::Show>& Gothic::getDocument(int id) {
 
 std::u16string Gothic::nestedPath(const std::initializer_list<const char16_t*> &name, Tempest::Dir::FileType type) {
   return CommandLine::inst().nestedPath(name,type);
+  }
+
+std::u16string Gothic::userPath(std::string_view name) {
+  auto path = TextCodec::toUtf16(name);
+#if defined(__IOS__)
+  path.insert(0,CommandLine::inst().rootPath());
+#endif
+  return path;
   }
 
 void Gothic::setupVmCommonApi(zenkit::DaedalusVm& vm) {
