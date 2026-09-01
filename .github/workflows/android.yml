@@ -62,8 +62,8 @@ jobs:
           cp -- "$APK" OpenGothic-migration.apk
 
       # Migration builds stay as CI artifacts. The rolling latest-android
-      # release is re-enabled only after boot-to-menu and device lifecycle
-      # parity with the previous port have both passed.
+      # release remains a WIP until the memory, GPU-compatibility, and
+      # performance gates have passed on physical devices.
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
