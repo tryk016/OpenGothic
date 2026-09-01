@@ -72,22 +72,28 @@ const size_t Workers::taskPerThread = 128;
 const size_t Workers::taskPerStep   = 16;
 
 Workers::Workers() {
-  size_t id=0;
-  for(auto& i:th) {
-    i = std::thread([this,id]() noexcept {
+#if defined(__ANDROID__)
+  workerCount = maxThreads();
+#else
+  // Preserve the established desktop pool size. Some parallelTasks callers
+  // can depend on all fixed worker slots being available concurrently.
+  workerCount = MAX_THREADS;
+#endif
+  for(size_t id=0; id<workerCount; ++id) {
+    th[id] = std::thread([this,id]() noexcept {
       threadFunc(id);
       });
-    ++id;
     }
   }
 
 Workers::~Workers() {
   running  = false;
   workSet  = nullptr;
-  workSize = MAX_THREADS;
+  workSize = workerCount;
   execWork(minWorkSize<void,void>());
   for(auto& i:th)
-    i.join();
+    if(i.joinable())
+      i.join();
   }
 
 Workers &Workers::inst() {
@@ -99,6 +105,11 @@ uint8_t Workers::maxThreads() {
   int32_t th = int32_t(std::thread::hardware_concurrency());
   if(th<=0)
     th = 1;
+#if defined(__ANDROID__)
+  // Mobile SoCs expose all efficiency and performance cores here. Keeping
+  // four workers avoids oversubscription and delays thermal throttling.
+  th = std::min<int32_t>(th,4);
+#endif
   if(th>MAX_THREADS)
     return MAX_THREADS;
   return uint8_t(th);

@@ -13,6 +13,9 @@
 [submodule "lib/dmusic"]
 	path = lib/dmusic
 	url = https://github.com/GothicKit/dmusic.git
+[submodule "lib/astcenc"]
+	path = lib/astcenc
+	url = https://github.com/ARM-software/astc-encoder
 [submodule "lib/rapidjson"]
 	path = lib/rapidjson
 	url = https://github.com/Tencent/rapidjson.git

@@ -85,6 +85,7 @@ class Workers final {
     bool                              running=true;
 
     std::thread                       th[MAX_THREADS];
+    uint8_t                           workerCount=0;
 
     std::mutex                        sync;
     std::condition_variable           workWait;

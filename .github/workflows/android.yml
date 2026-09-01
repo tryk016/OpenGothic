@@ -36,8 +36,9 @@ jobs:
       - name: Install host shader compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y glslang-tools
+          sudo apt-get install -y glslang-tools spirv-tools
           glslangValidator --version
+          spirv-val --version
 
       - name: Build signed migration APK
         working-directory: android
@@ -45,6 +46,36 @@ jobs:
           gradle wrapper --gradle-version 8.7
           chmod +x gradlew
           ./gradlew assembleRelease -PbuildNum=${{ github.run_number }}
+
+      - name: Validate generated slot shaders
+        run: |
+          set -Eeuo pipefail
+          shader_root="android/app/.cxx"
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+
+          for abi in arm64-v8a x86_64; do
+            mapfile -d '' -t shaders < <(
+              find "$shader_root" -type f -path "*/${abi}/*" \
+                \( -name '*_slot.*.sprv' -o -name 'main_pfx*.frag.sprv' \) \
+                -print0 | sort -z
+              )
+            if (( ${#shaders[@]} == 0 )); then
+              echo "::error title=Missing ${abi} slot shaders::No slot shaders were generated."
+              exit 1
+            fi
+
+            for shader in "${shaders[@]}"; do
+              spirv-val "$shader"
+              disassembly="$temp_dir/shader.spvasm"
+              spirv-dis "$shader" -o "$disassembly"
+              if grep -qE 'OpCapability[[:space:]]+(RuntimeDescriptorArray(EXT)?|ShaderNonUniform(EXT)?)([[:space:]]|$)' "$disassembly"; then
+                echo "::error file=${shader},title=Forbidden slot capability::Slot shader requires bindless descriptor indexing."
+                exit 1
+              fi
+            done
+            echo "Validated ${#shaders[@]} ${abi} slot shaders."
+          done
 
       - name: Verify native libraries
         run: |

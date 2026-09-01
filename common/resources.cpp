@@ -27,6 +27,7 @@
 #include "graphics/mesh/animation.h"
 #include "graphics/mesh/attachbinder.h"
 #include "graphics/material.h"
+#include "graphics/astctranscoder.h"
 #include "dmusic/directmusic.h"
 #include "utils/fileext.h"
 #include "utils/gthfont.h"
@@ -39,6 +40,17 @@
 using namespace Tempest;
 
 Resources* Resources::inst=nullptr;
+
+static Tempest::TextureFormat textureFormat(zenkit::TextureFormat format) {
+  switch(format) {
+    case zenkit::TextureFormat::DXT1: return TextureFormat::DXT1;
+    case zenkit::TextureFormat::DXT2:
+    case zenkit::TextureFormat::DXT3: return TextureFormat::DXT3;
+    case zenkit::TextureFormat::DXT4:
+    case zenkit::TextureFormat::DXT5: return TextureFormat::DXT5;
+    default:                          return TextureFormat::RGBA8;
+    }
+  }
 
 static void emplaceTag(char* buf, char tag){
   for(size_t i=1;buf[i];++i){
@@ -347,18 +359,21 @@ Tempest::Texture2d* Resources::implLoadTexture(std::string_view cname, bool forc
   if(it!=texCache.end())
     return it->second.get();
 
-  auto tex = implLoadTextureUncached(cname, forceMips);
+  TextureFormat sourceFormat = TextureFormat::Undefined;
+  auto tex = implLoadTextureUncached(cname,forceMips,&sourceFormat);
   if(!tex.isEmpty()) {
     std::unique_ptr<Texture2d> t{new Texture2d(std::move(tex))};
     Texture2d* ret=t.get();
     texCache[std::move(name)] = std::move(t);
+    texSourceFormats[ret] = sourceFormat==TextureFormat::Undefined ? ret->format() : sourceFormat;
     return ret;
     }
   texCache[std::move(name)] = nullptr;
   return nullptr;
   }
 
-Texture2d Resources::implLoadTextureUncached(std::string_view name, bool forceMips) {
+Texture2d Resources::implLoadTextureUncached(std::string_view name, bool forceMips,
+                                             TextureFormat* sourceFormat) {
   if(name.empty())
     return Texture2d();
 
@@ -378,11 +393,26 @@ Texture2d Resources::implLoadTextureUncached(std::string_view name, bool forceMi
          tex.format() == zenkit::TextureFormat::DXT3 ||
          tex.format() == zenkit::TextureFormat::DXT4 ||
          tex.format() == zenkit::TextureFormat::DXT5) {
+        if(sourceFormat!=nullptr)
+          *sourceFormat = textureFormat(tex.format());
+#if defined(HAS_ASTCENC)
+        if(AstcTranscoder::enabled(tex.format()) &&
+           (!forceMips || tex.mipmaps()>1)) {
+          auto source = AstcTranscoder::fingerprint(*reader);
+          auto astc = AstcTranscoder::transcode(name,tex,source);
+          if(!astc.isEmpty()) {
+            const bool useMipmap = forceMips || astc.mipCount()>1;
+            return dev.texture(astc,useMipmap);
+            }
+          }
+#endif
         auto dds = zenkit::to_dds(tex);
         auto ddsRead = zenkit::Read::from(dds);
 
-        return implLoadTextureUncached(name, *ddsRead, forceMips);
+        return implLoadTextureUncached(name,*ddsRead,forceMips,sourceFormat);
         } else {
+        if(sourceFormat!=nullptr)
+          *sourceFormat = TextureFormat::RGBA8;
         auto rgba = tex.as_rgba8(0);
 
         try {
@@ -398,12 +428,13 @@ Texture2d Resources::implLoadTextureUncached(std::string_view name, bool forceMi
 
   if(auto* entry = Resources::vdfsIndex().find(name)) {
     auto reader = entry->open_read();
-    return implLoadTextureUncached(name, *reader, forceMips);
+    return implLoadTextureUncached(name,*reader,forceMips,sourceFormat);
     }
   return Texture2d();
   }
 
-Texture2d Resources::implLoadTextureUncached(std::string_view name, zenkit::Read& data, bool forceMips) {
+Texture2d Resources::implLoadTextureUncached(std::string_view name, zenkit::Read& data,
+                                             bool forceMips, TextureFormat* sourceFormat) {
   try {
     std::vector<uint8_t> raw;
     data.seek(0, zenkit::Whence::END);
@@ -413,6 +444,8 @@ Texture2d Resources::implLoadTextureUncached(std::string_view name, zenkit::Read
 
     Tempest::MemReader rd((uint8_t*)raw.data(), raw.size());
     Tempest::Pixmap    pm(rd);
+    if(sourceFormat!=nullptr)
+      *sourceFormat = pm.format();
 
     const bool useMipmap = forceMips || (pm.mipCount()>1); // do not generate mips, if original texture has has none
     return dev.texture(pm, useMipmap);
@@ -784,6 +817,14 @@ Texture2d Resources::loadTextureUncached(std::string_view name, bool forceMips) 
 const Texture2d* Resources::loadTexture(std::string_view name, bool forceMips) {
   std::lock_guard<std::recursive_mutex> g(inst->sync);
   return inst->implLoadTexture(name,forceMips);
+  }
+
+TextureFormat Resources::sourceTextureFormat(const Texture2d* texture) {
+  if(texture==nullptr)
+    return TextureFormat::Undefined;
+  std::lock_guard<std::recursive_mutex> guard(inst->sync);
+  const auto found = inst->texSourceFormats.find(texture);
+  return found==inst->texSourceFormats.end() ? texture->format() : found->second;
   }
 
 const Texture2d* Resources::loadTexture(Tempest::Color color) {

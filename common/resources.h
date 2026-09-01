@@ -97,6 +97,7 @@ class Resources final {
     static auto                      fallbackImage() -> const Tempest::StorageImage&;
     static Tempest::Texture2d        loadTextureUncached(std::string_view name, bool forceMips = false);
     static const Tempest::Texture2d* loadTexture(std::string_view name, bool forceMips = false);
+    static Tempest::TextureFormat    sourceTextureFormat(const Tempest::Texture2d* texture);
     static const Tempest::Texture2d* loadTexture(Tempest::Color color);
     static const Tempest::Texture2d* loadTexture(std::string_view name, int32_t v, int32_t c);
     static       Tempest::Texture2d  loadTexturePm(const Tempest::Pixmap& pm);
@@ -182,8 +183,11 @@ class Resources final {
     void                  detectVdf(std::vector<Archive>& ret, const std::u16string& root);
 
     Tempest::Texture2d*   implLoadTexture(std::string_view cname, bool forceMips);
-    Tempest::Texture2d    implLoadTextureUncached(std::string_view name, bool forceMips);
-    Tempest::Texture2d    implLoadTextureUncached(std::string_view name, zenkit::Read& data, bool forceMips);
+    Tempest::Texture2d    implLoadTextureUncached(std::string_view name, bool forceMips,
+                                                  Tempest::TextureFormat* sourceFormat = nullptr);
+    Tempest::Texture2d    implLoadTextureUncached(std::string_view name, zenkit::Read& data,
+                                                  bool forceMips,
+                                                  Tempest::TextureFormat* sourceFormat = nullptr);
     ProtoMesh*            implLoadMesh(std::string_view name);
     std::unique_ptr<ProtoMesh> implLoadMeshMain(std::string name);
     std::unique_ptr<Animation> implLoadAnimation(std::string name);
@@ -247,6 +251,7 @@ class Resources final {
     uint8_t     recycledId = 0;
 
     TextureCache                                                      texCache;
+    std::unordered_map<const Tempest::Texture2d*,Tempest::TextureFormat> texSourceFormats;
     std::map<Tempest::Color,std::unique_ptr<Tempest::Texture2d>,Less> pixCache;
     std::unordered_map<std::string,std::unique_ptr<ProtoMesh>>        aniMeshCache;
     std::unordered_map<DecalK,std::unique_ptr<ProtoMesh>,Hash>        decalMeshCache;

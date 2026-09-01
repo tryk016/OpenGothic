@@ -140,7 +140,7 @@ Material::AlphaFunc Material::loadAlphaFunc(zenkit::AlphaFunction zenAlpha,
     }
 
   if(alpha==Material::AlphaFunc::AlphaTest || alpha==Material::AlphaFunc::Transparent) {
-    if(tex!=nullptr && tex->format()==Tempest::TextureFormat::DXT1 && clrAlpha==255) {
+    if(tex!=nullptr && Resources::sourceTextureFormat(tex)==Tempest::TextureFormat::DXT1 && clrAlpha==255) {
       alpha = Material::AlphaFunc::Solid;
       }
     }

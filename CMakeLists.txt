@@ -139,6 +139,41 @@ set(ZK_ENABLE_DEPRECATION      OFF CACHE INTERNAL "")
 add_subdirectory(lib/ZenKit)
 target_link_libraries(${PROJECT_NAME} zenkit)
 
+# Keep Gothic's BC-compressed textures compressed on mobile GPUs that expose
+# ASTC but not BC. The transcoder remains capability-gated at runtime, so BC
+# capable devices and every non-Android platform keep their existing path.
+if(ANDROID)
+  set(ASTCENC_CLI          OFF CACHE INTERNAL "")
+  set(ASTCENC_SHAREDLIB    OFF CACHE INTERNAL "")
+  set(ASTCENC_UNITTEST     OFF CACHE INTERNAL "")
+  set(ASTCENC_DECOMPRESSOR OFF CACHE INTERNAL "")
+  set(ASTCENC_DIAGNOSTICS  OFF CACHE INTERNAL "")
+  set(ASTCENC_WERROR       OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_NATIVE   OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_NONE     OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_AVX2     OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_SSE41    OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_SSE2     OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_SVE_256  OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_SVE_128  OFF CACHE INTERNAL "")
+  set(ASTCENC_ISA_NEON     OFF CACHE INTERNAL "")
+
+  if(ANDROID_ABI STREQUAL "arm64-v8a")
+    set(ASTCENC_ISA_NEON ON CACHE INTERNAL "")
+    set(ASTCENC_LIB astcenc-neon-static)
+  elseif(ANDROID_ABI STREQUAL "x86_64")
+    set(ASTCENC_ISA_SSE41 ON CACHE INTERNAL "")
+    set(ASTCENC_LIB astcenc-sse4.1-static)
+  else()
+    message(FATAL_ERROR "astcenc: unsupported ANDROID_ABI '${ANDROID_ABI}'")
+  endif()
+
+  add_subdirectory(lib/astcenc)
+  target_include_directories(${PROJECT_NAME} PRIVATE lib/astcenc/Source)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_ASTCENC=1)
+  target_link_libraries(${PROJECT_NAME} ${ASTCENC_LIB})
+endif()
+
 # dmusic
 set(DM_BUILD_STATIC            ON  CACHE INTERNAL "")
 set(DM_ENABLE_ASAN             OFF CACHE INTERNAL "")

@@ -9,6 +9,7 @@
 
 #include "graphics/mesh/submesh/packedmesh.h"
 #include "graphics/visualfx.h"
+#include "graphics/astctranscoder.h"
 #include "world/objects/globalfx.h"
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
@@ -115,6 +116,9 @@ World::World(GameSession& game, std::string_view file, bool startup, std::functi
 
     wmatrix->buildIndex();
     loadProgress(100);
+#if defined(HAS_ASTCENC)
+    AstcTranscoder::logStats();
+#endif
     }
   catch(...) {
     Tempest::Log::e("unable to load landscape mesh");

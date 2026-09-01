@@ -165,11 +165,10 @@ vec4 diffuseTex() {
 
 #if defined(BINDLESS)
   nonuniformEXT uint tId = bucketId;
+  vec4 tex = texture(sampler2D(textureMain[tId],samplerMain),uv);
 #else
-  const         uint tId = 0;
+  vec4 tex = texture(sampler2D(textureMain,samplerMain),uv);
 #endif
-
-  vec4 tex = texture(sampler2D(textureMain[tId], samplerMain),uv);
 
 #if !defined(SIMPLE_MAT)
   tex.a *= alphaWeight;
