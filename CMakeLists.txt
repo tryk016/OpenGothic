@@ -221,9 +221,10 @@ if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
 endif()
 
 # the game
+target_sources(Gothic2Notr PRIVATE game/gamemain.cpp)
 if(ANDROID)
   target_sources(Gothic2Notr PRIVATE game/main_android.cpp)
-  target_link_libraries(Gothic2Notr PRIVATE Tempest)
+  target_link_libraries(Gothic2Notr PRIVATE OpenGothic)
 else()
   target_sources(Gothic2Notr PRIVATE game/main.cpp icon.rc)
   target_link_libraries(Gothic2Notr PRIVATE OpenGothic)
