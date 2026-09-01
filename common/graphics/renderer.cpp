@@ -2746,7 +2746,7 @@ Size Renderer::internalResolution(Tempest::Size src) const {
   const float scale = internalResolutionScale();
   if(scale>=1.f)
     return src;
-  return Size(std::max<uint32_t>(1, uint32_t(float(src.w)*scale + 0.5f)),
-              std::max<uint32_t>(1, uint32_t(float(src.h)*scale + 0.5f)));
+  return Size(std::max(1, int(float(src.w)*scale + 0.5f)),
+              std::max(1, int(float(src.h)*scale + 0.5f)));
   }
 
