@@ -148,6 +148,7 @@ class Renderer final {
 
       float          vidResIndex        = 0;
       float          resolutionScale    = 1;
+      float          fogResolutionScale = 1;
       uint8_t        upscaleFilter      = 0;
 
       float          vsmMipBias         = 0.25; //TODO: set to lower, eventually
@@ -191,6 +192,7 @@ class Renderer final {
       Tempest::Sampler       sampler = Tempest::Sampler::bilinear();
 
       bool                   lutIsInitialized = false;
+      float                  fogResolutionScale = 1;
       Tempest::Attachment    transLut, multiScatLut, viewLut, viewCldLut;
       Tempest::StorageImage  cloudsLut, fogLut3D, fogLut3DMs;
       Tempest::StorageImage  occlusionLut, irradianceLut;

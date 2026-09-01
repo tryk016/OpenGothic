@@ -154,6 +154,8 @@ void Renderer::setupSettings() {
     }
 
   settings.upscaleFilter = uint8_t(std::clamp(Gothic::inst().settingsGetI("INTERNAL", "upscaleFilter"), 0, 1));
+  settings.fogResolutionScale = std::clamp(Gothic::inst().settingsGetF("INTERNAL", "fogResolutionScale"),
+                                           0.25f, 1.f);
   settings.aaEnabled     = (Gothic::options().aaPreset>0) && (settings.resolutionScale>=1.f);
   Log::i("Internal resolution scale = ", settings.resolutionScale,
          " upscale filter = ", settings.upscaleFilter==0 ? "Lanczos" : "bilinear");
@@ -471,11 +473,12 @@ void Renderer::resetSkyFog() {
     if(skyPathTrace)
       q = PathTrace;
 
-    if(sky.quality==q) {
+    if(sky.quality==q && sky.fogResolutionScale==settings.fogResolutionScale) {
       return;
       }
 
-    sky.quality = q;
+    sky.quality            = q;
+    sky.fogResolutionScale = settings.fogResolutionScale;
   }
 
   Resources::recycle(std::move(sky.fogLut3D));
@@ -483,22 +486,35 @@ void Renderer::resetSkyFog() {
 
   sky.lutIsInitialized = false;
 
+  const auto scaledFogDim = [scale = settings.fogResolutionScale](uint32_t value) {
+    return std::max<uint32_t>(1, uint32_t(float(value)*scale + 0.5f));
+    };
+
   switch(sky.quality) {
     case None:
     case VolumetricLQ:
-      sky.fogLut3D   = device.image3d(sky.lutRGBAFormat, 160, 90, 64);
+      sky.fogLut3D = device.image3d(sky.lutRGBAFormat,
+                                    scaledFogDim(160), scaledFogDim(90), scaledFogDim(64));
       break;
     case VolumetricHQ:
       // fogLut and oclussion are decupled
-      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,  128,64,32);
-      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat, 128,64,32);
+      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,
+                                     scaledFogDim(128), scaledFogDim(64), scaledFogDim(32));
+      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat,
+                                     scaledFogDim(128), scaledFogDim(64), scaledFogDim(32));
       break;
     case Epipolar:
-      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,  128,64,32);
-      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat, 128,64,32);
+      sky.fogLut3D   = device.image3d(sky.lutRGBFormat,
+                                     scaledFogDim(128), scaledFogDim(64), scaledFogDim(32));
+      sky.fogLut3DMs = device.image3d(sky.lutRGBAFormat,
+                                     scaledFogDim(128), scaledFogDim(64), scaledFogDim(32));
       break;
     case PathTrace:
       break;
+    }
+
+  if(!sky.fogLut3D.isEmpty()) {
+    Log::i("Fog LUT resolution = ", sky.fogLut3D.w(), "x", sky.fogLut3D.h(), "x", sky.fogLut3D.d());
     }
   }
 

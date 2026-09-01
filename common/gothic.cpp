@@ -154,6 +154,7 @@ Gothic::Gothic() {
   defaults->set("INTERNAL",     "vidResIndex", 0); // full-res
   defaults->set("INTERNAL",     "resolutionScale", 0.f); // 0 keeps the legacy vidResIndex mapping
   defaults->set("INTERNAL",     "upscaleFilter", 0);      // 0: Lanczos, 1: bilinear
+  defaults->set("INTERNAL",     "fogResolutionScale", 1.f);
 
   defaults->set("VIDEO", "zVidBrightness", 0.5f);
   defaults->set("VIDEO", "zVidContrast",   0.5f);
