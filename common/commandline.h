@@ -67,6 +67,9 @@ class CommandLine {
 #if defined(__OSX__)
     bool                isRQuery     = false;
     bool                isMeshSh     = false;
+#elif defined(__IOS__)
+    bool                isRQuery     = true;
+    bool                isMeshSh     = false;
 #else
     bool                isRQuery     = true;
     bool                isMeshSh     = true;
@@ -80,4 +83,3 @@ class CommandLine {
     bool                forceG2NR    = false;
     uint32_t            aaPresetId = 0;
   };
-

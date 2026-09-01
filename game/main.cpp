@@ -22,7 +22,6 @@
 #endif
 
 #include <cstdio>
-#include <chrono>
 
 #include "utils/crashlog.h"
 #include "utils/systemmsg.h"
@@ -33,23 +32,6 @@
 #include "commandline.h"
 
 #include <dmusic.h>
-
-#if defined(__IOS__)
-#include <Tempest/IOSRuntime>
-extern bool iosStartupLoadInProgress;
-
-static void yieldToUIKitDuringStartupLoad() {
-  if(!iosStartupLoadInProgress)
-    return;
-  using Clock = std::chrono::steady_clock;
-  static auto lastYield = Clock::now();
-  const auto now = Clock::now();
-  if(now-lastYield < std::chrono::milliseconds(50))
-    return;
-  lastYield = now;
-  Tempest::iOS::yieldToUIKit();
-  }
-#endif
 
 std::string_view selectDevice(const Tempest::AbstractGraphicsApi& api) {
   auto d = api.devices();
@@ -112,21 +94,21 @@ int main(int argc,const char** argv) {
   {
     auto appdir = InstallDetect::applicationSupportDirectory();
     std::filesystem::current_path(appdir);
+#if defined(NDEBUG)
     // Capture the runtime's last words: libobjc/libc++abi/libmalloc print their
     // fatal reason to stderr before abort(). CWD is the user-visible Documents
     // folder, so the file can be pulled via the Files app. Unbuffered, so the
     // message survives the crash.
+    std::rename("stderr.log","stderr.prev.log");
     if(std::freopen("stderr.log","w",stderr)!=nullptr)
       std::setvbuf(stderr,nullptr,_IONBF,0);
+#endif
   }
 #endif
 
   try {
     static Tempest::WFile logFile("log.txt");
     Tempest::Log::setOutputCallback([](Tempest::Log::Mode mode, const char* text) {
-#if defined(__IOS__)
-      yieldToUIKitDuringStartupLoad();
-#endif
       logFile.write(text,std::strlen(text));
       logFile.write("\n",1);
       if(mode==Tempest::Log::Error)

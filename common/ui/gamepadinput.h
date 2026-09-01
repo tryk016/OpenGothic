@@ -32,6 +32,7 @@ enum class PadCtx : uint8_t {
 class GamepadInput {
   public:
     GamepadInput(MainWindow& owner, PlayerControl& ctrl);
+    ~GamepadInput();
 
     void tick(uint64_t dt);
 
@@ -102,6 +103,7 @@ class GamepadInput {
     void releaseAllWorld();                                       // drop held world actions
 
     void loadConfig();                     // read the [GAMEPAD] section
+    void reloadConfig();                   // apply changes from a neutral state
 
     void  tickRing(const GamepadState& s,
                    const std::vector<GamepadButtonEvent>& events);

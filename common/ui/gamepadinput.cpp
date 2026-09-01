@@ -49,8 +49,14 @@ static_assert(slopedAxisThreshold(0.25f, 0.269f, 0.12f)<0.960f);
 
 GamepadInput::GamepadInput(MainWindow& owner, PlayerControl& ctrl)
   : owner(owner), ctrl(ctrl) {
+  Gamepad::initialize();
   loadConfig();
+  Gothic::inst().onSettingsChanged.bind(this,&GamepadInput::reloadConfig);
   observedInputGen = ctrl.inputGeneration();
+  }
+
+GamepadInput::~GamepadInput() {
+  Gothic::inst().onSettingsChanged.ubind(this,&GamepadInput::reloadConfig);
   }
 
 void GamepadInput::loadConfig() {
@@ -70,6 +76,11 @@ void GamepadInput::loadConfig() {
   lookSens   = std::clamp(f("lookSensitivity",0.20f),0.01f,1.f);
   invertY    = Gothic::settingsGetI("GAMEPAD","invertY")!=0;
   stuckProtect = (Gothic::settingsGetI("GAMEPAD","noStuckProtect")==0); // opt-out
+  }
+
+void GamepadInput::reloadConfig() {
+  releaseAllWorld();
+  loadConfig();
   }
 
 void GamepadInput::openMap() {

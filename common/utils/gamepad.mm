@@ -3,6 +3,7 @@
 #include <Tempest/Platform>
 
 #include <cstddef>
+#include <cassert>
 #include <deque>
 #include <mutex>
 
@@ -267,7 +268,7 @@ void setApplicationActive(bool active) {
     deactivateController();
   }
 
-void initialize() {
+void initializeBackend() {
   dispatch_queue_attr_t attributes =
     dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL,
                                             QOS_CLASS_USER_INTERACTIVE, 0);
@@ -357,14 +358,22 @@ void initialize() {
 
 }
 
+void initialize() {
+  if(![NSThread isMainThread]) {
+    assert(false && "Gamepad::initialize must run on the main thread");
+    return;
+    }
+  std::call_once(initializeOnce, initializeBackend);
+  }
+
 GamepadState poll() {
-  std::call_once(initializeOnce, initialize);
+  initialize();
   std::lock_guard<std::mutex> guard(snapshotSync);
   return snapshot;
   }
 
 GamepadInputFrame consume() {
-  std::call_once(initializeOnce, initialize);
+  initialize();
 
   GamepadInputFrame frame;
   std::lock_guard<std::mutex> guard(snapshotSync);

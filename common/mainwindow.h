@@ -106,9 +106,6 @@ class MainWindow : public Tempest::Window {
     void paintFocus     (Tempest::Painter& p, Tempest::Rect rect);
 
     void drawBar(Tempest::Painter& p, const Tempest::Texture2d *bar, int x, int y, float v, Tempest::AlignFlag flg);
-#if defined(__MOBILE_PLATFORM__)
-    void drawPadHints(Tempest::Painter& p, float scale);
-#endif
     void drawMsg(Tempest::Painter& p);
     void drawProgress(Tempest::Painter& p, int x, int y, int w, int h, float v);
     void drawLoading (Tempest::Painter& p,int x,int y,int w,int h);
@@ -196,6 +193,8 @@ class MainWindow : public Tempest::Window {
 
 #if defined(__IOS__)
     struct PendingSave final {
+      static constexpr uint64_t TimeoutMs = 2000;
+
       enum class Stage : uint8_t {
         None,
         CaptureRequested,
@@ -207,8 +206,17 @@ class MainWindow : public Tempest::Window {
       std::string         name;
       Tempest::Attachment preview;
       uint8_t             frameId = 0;
+      uint64_t            deadline = 0;
 
       bool active() const { return stage!=Stage::None; }
+      void reset() {
+        stage = Stage::None;
+        slot.clear();
+        name.clear();
+        preview = Tempest::Attachment();
+        frameId = 0;
+        deadline = 0;
+        }
       } pendingSave;
 #endif
 
@@ -227,8 +235,6 @@ class MainWindow : public Tempest::Window {
 #if defined(__MOBILE_PLATFORM__)
     TouchInput                mobileUi;
     GamepadInput              gamepad;
-    PadCtx                    lastPadCtx   = PadCtx::Loading;
-    uint64_t                  padHintUntil = 0;   // controls-help auto-hide time
     int                       lastPlayerHp = -1;  // for damage haptics
 #endif
 #if defined(__IOS__)

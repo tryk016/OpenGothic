@@ -8,6 +8,9 @@
 #if !defined(__IOS__)
 
 namespace Gamepad {
+void initialize() {
+  }
+
 GamepadState poll() {
   return GamepadState{};
   }
