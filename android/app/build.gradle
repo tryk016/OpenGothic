@@ -18,7 +18,10 @@ android {
 
     defaultConfig {
         applicationId 'opengothic.gothic2'
-        minSdk 26
+        // The game data intentionally lives in the public
+        // /sdcard/OpenGothic directory. MANAGE_EXTERNAL_STORAGE, which makes
+        // that model reliable, is available from Android 11 (API 30).
+        minSdk 30
         targetSdk 34
         // Keep update installs monotonic across the legacy Android repository,
         // whose published builds already used version codes below 100000.

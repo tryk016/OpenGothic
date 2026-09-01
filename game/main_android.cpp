@@ -19,6 +19,11 @@ extern "C" void android_main(android_app* app) {
   // its first Window and waits for an ANativeWindow.
   Tempest::AndroidApi::setAndroidApp(app);
 
+  if(::access(GameData,R_OK)!=0) {
+    Tempest::Log::e("Android game directory is not readable: ",GameData);
+    return;
+    }
+
   if(::chdir(GameRoot)!=0)
     Tempest::Log::e("Unable to use Android game directory: ",GameRoot);
 

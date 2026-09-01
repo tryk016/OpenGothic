@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenGothic</string>
+    <string name="storage_access_message">OpenGothic needs access to /sdcard/OpenGothic to read your Gothic II files.</string>
+    <string name="storage_access_button">Grant file access</string>
 </resources>

@@ -8,12 +8,11 @@
     <application
         android:label="@string/app_name"
         android:hasCode="true"
-        android:allowBackup="false"
-        android:requestLegacyExternalStorage="true">
+        android:allowBackup="false">
 
         <activity
-            android:name="opengothic.gothic2.MainActivity"
-            android:exported="true"
+            android:name="opengothic.gothic2.GameHostActivity"
+            android:exported="false"
             android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|keyboard|navigation|uiMode"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AppCompat.NoActionBar">
@@ -21,6 +20,13 @@
             <!-- GameActivity loads libGothic2Notr.so -->
             <meta-data android:name="android.app.lib_name" android:value="Gothic2Notr" />
 
+        </activity>
+
+        <activity
+            android:name="opengothic.gothic2.MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
