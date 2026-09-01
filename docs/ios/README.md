@@ -120,8 +120,8 @@ are optional and do not change the renderer used on other platforms:
   compilation as the authoritative fallback;
 - MetalFX Spatial upscaling with a Lanczos fallback.
 
-The maintained public build enables Spatial and leaves the experimental
-Temporal path disabled.
+The maintained public build enables Spatial. Temporal upscaling is not part of
+the maintained port.
 
 MetalFX support is opportunistic. If a requested scaler is unavailable or
 rejects the active texture configuration, rendering falls back without making

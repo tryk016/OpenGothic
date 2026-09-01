@@ -13,14 +13,14 @@
       "tintColor": "8B0000",
       "version": "1.3.1",
       "versionDate": "2026-08-31",
-      "versionDescription": "MetalFX Spatial is enabled; MetalFX Temporal is disabled. Includes the maintained iOS performance profile and complete touch controls.",
+      "versionDescription": "MetalFX Spatial is enabled. Includes the maintained iOS performance profile and complete touch controls.",
       "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.1-spatial/OpenGothic-iOS-1.3.1-MetalFX-Spatial.ipa",
       "size": 12057394,
       "versions": [
         {
           "version": "1.3.1",
           "date": "2026-08-31",
-          "localizedDescription": "MetalFX Spatial is enabled; MetalFX Temporal is disabled. Includes the maintained iOS performance profile and complete touch controls.",
+          "localizedDescription": "MetalFX Spatial is enabled. Includes the maintained iOS performance profile and complete touch controls.",
           "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.1-spatial/OpenGothic-iOS-1.3.1-MetalFX-Spatial.ipa",
           "size": 12057394,
           "minOSVersion": "15.0"

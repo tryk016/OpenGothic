@@ -20,7 +20,7 @@ and a mobile performance profile.
 ## Install on iPhone or iPad
 
 The maintained build uses MetalFX Spatial with an automatic Lanczos fallback.
-MetalFX Temporal is not enabled in the public application.
+MetalFX Temporal is not part of the maintained public application.
 
 1. Set up [SideStore](https://sidestore.io) or another compatible sideloading
    client.
