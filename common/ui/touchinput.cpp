@@ -593,7 +593,7 @@ void TouchInput::mouseDragEvent(MouseEvent& e) {
   if(id==lookId) {
     const Point d = pos - lookLast;
     lookLast = pos;
-    ctrl.onRotateMouse(float(-d.x)*4.f, float(-d.y)*2.f);
+    ctrl.onRotateMouse(float(-d.x)*3.4f, float(-d.y)*1.7f);
     return;
     }
 
