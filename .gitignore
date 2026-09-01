@@ -15,6 +15,7 @@ CMakeLists.txt.user*
 # Build-dir
 build/
 build-*/
+artifacts/
 bin/log.txt
 bin/crash.log
 bin/dbg.bin

@@ -23,9 +23,11 @@ used by this port.
    the current renderer; do not replay historical probes or reverted patches.
 
 CI migration builds are signed with the existing development key so they can
-update an installed test build without deleting game data. Until boot-to-menu
-and lifecycle parity pass on a device, CI uploads APKs only as workflow
-artifacts and does not update the public `latest-android` release.
+update an installed test build without deleting game data. Migration version
+codes start at 100000, above the legacy repository's published builds, and add
+the workflow run number so every successful CI build remains upgradeable.
+Until boot-to-menu and lifecycle parity pass on a device, CI uploads APKs only
+as workflow artifacts and does not update the public `latest-android` release.
 
 The application is fixed to landscape. A full game-data installation contains
 all three original directories:
