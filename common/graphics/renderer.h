@@ -165,8 +165,10 @@ class Renderer final {
       float          vsmMipBias         = 0.25; //TODO: set to lower, eventually
       } settings;
 
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
     bool                      diagnosticSkyPrepared       = false;
     bool                      diagnosticVisibilityFrozen = false;
+#endif
 
     Frustrum                  frustrum[SceneGlobals::V_Count];
     Tempest::Matrix4x4        proj, viewProj, viewProjLwc;
