@@ -11,12 +11,20 @@
       "localizedDescription": "OpenGothic for iPhone and iPad with MetalFX Spatial and automatic Lanczos fallback, 512 x 512 mobile shadow maps, off-screen NPC animation optimization, independent multitouch controls and physical-controller support. Requires legally owned Gothic II: Night of the Raven game data; no game assets are included.",
       "iconURL": "https://raw.githubusercontent.com/tryk016/OpenGothic/codex/ios-upstream-integration/ios/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
       "tintColor": "8B0000",
-      "version": "1.3.2",
-      "versionDate": "2026-09-01",
-      "versionDescription": "Fixes simultaneous on-screen controls and reduces right-stick touch sensitivity by 15%. MetalFX Spatial remains enabled and MetalFX Temporal remains disabled.",
-      "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.2-spatial/OpenGothic-iOS-1.3.2-MetalFX-Spatial.ipa",
-      "size": 12057466,
+      "version": "1.3.3",
+      "versionDate": "2026-09-02",
+      "versionDescription": "Renderer, lifecycle and writable-file stability updates, plus cleaner mobile input and device settings. MetalFX Spatial remains enabled; MetalFX Temporal remains disabled.",
+      "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.3-spatial/OpenGothic-iOS-1.3.3-MetalFX-Spatial.ipa",
+      "size": 12095765,
       "versions": [
+        {
+          "version": "1.3.3",
+          "date": "2026-09-02",
+          "localizedDescription": "Renderer, lifecycle and writable-file stability updates, plus cleaner mobile input and device settings. MetalFX Spatial remains enabled; MetalFX Temporal remains disabled.",
+          "downloadURL": "https://github.com/tryk016/OpenGothic/releases/download/ios-v1.3.3-spatial/OpenGothic-iOS-1.3.3-MetalFX-Spatial.ipa",
+          "size": 12095765,
+          "minOSVersion": "15.0"
+        },
         {
           "version": "1.3.2",
           "date": "2026-09-01",
