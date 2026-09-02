@@ -2,7 +2,11 @@
 
 #extension GL_ARB_separate_shader_objects : enable
 
-// Scalar FP32 port of AMD FidelityFX FSR 1.0.2 RCAS.
+precision mediump float;
+precision highp int;
+
+// Scalar port of AMD FidelityFX FSR 1.0.2 RCAS. Relaxed float precision lets
+// mobile drivers use native FP16 ALU while desktop drivers may retain FP32.
 // See FSR1-LICENSE.txt and https://github.com/GPUOpen-Effects/FidelityFX-FSR.
 
 layout(binding = 0) uniform sampler2D src;
