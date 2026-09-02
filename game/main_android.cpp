@@ -27,9 +27,9 @@ extern "C" void android_main(android_app* app) {
   if(::chdir(GameRoot)!=0)
     Tempest::Log::e("Unable to use Android game directory: ",GameRoot);
 
-  const char* argv[] = {"opengothic","-g",GameData};
+  const char* argv[] = {"opengothic","-g",GameData,"-save","4"};
   try {
-    (void)runOpenGothic(3,argv);
+    (void)runOpenGothic(5,argv);
     }
   catch(const std::exception& e) {
     Tempest::Log::e("Fatal Android startup error: ",e.what());
