@@ -10,6 +10,7 @@
 #include "game/gamescript.h"
 #include "utils/string_frm.h"
 #include "world/objects/interactive.h"
+#include "graphics/dynamic/frustrum.h"
 #include "world/objects/item.h"
 #include "world/world.h"
 #include "utils/versioninfo.h"
@@ -4794,7 +4795,7 @@ void Npc::updateTransform() {
   updateAnimation(0, true);
   }
 
-void Npc::updateAnimation(uint64_t dt, bool force) {
+void Npc::updateAnimation(uint64_t dt, bool force, PoseUpdate poseUpdate) {
   const auto camera = Gothic::inst().camera();
   if(isPlayer() && camera!=nullptr && camera->isFree())
     dt = 0;
@@ -4821,7 +4822,21 @@ void Npc::updateAnimation(uint64_t dt, bool force) {
     durtyTranform = 0;
     }
 
-  bool syncAtt = visual.updateAnimation(this,nullptr,owner,dt,force);
+  const bool forcePose = force || (poseUpdate==PoseUpdate::Full && poseDeferred);
+  bool syncAtt = visual.updateAnimation(this,nullptr,owner,dt,forcePose,poseUpdate);
   if(syncAtt)
     visual.syncAttaches();
+  poseDeferred = poseUpdate==PoseUpdate::EventsOnly;
+  }
+
+bool Npc::isInAnimationFrustrum(const Frustrum& frustrum) const {
+  // Keep edge-of-screen weapons, effects, and animation overshoot in Full.
+  static constexpr float FrustrumMargin = 300.f;
+  const Bounds b = bounds();
+  return frustrum.testPoint(position(),b.rConservative+FrustrumMargin);
+  }
+
+void Npc::refreshAnimationPose() {
+  if(poseDeferred)
+    updateAnimation(0,true,PoseUpdate::Full);
   }

@@ -59,6 +59,7 @@ class WorldObjects final {
     void           removeNpc(Npc& npc);
 
     void           updateAnimation(uint64_t dt);
+    void           refreshAnimationPose();
 
     bool           isTargeted(Npc& npc);
     Npc*           findHero();
@@ -176,6 +177,7 @@ class WorldObjects final {
     std::vector<std::unique_ptr<Npc>>  npcInvalid; // dead or invalid TA
     std::vector<std::unique_ptr<Npc>>  npcRemoved; // removed, but may have a dangling references in game
     std::vector<Npc*>                  npcNear;
+    bool                               animationRefreshPending=false;
 
     std::vector<AbstractTrigger*>      triggers;
     std::vector<AbstractTrigger*>      triggersTk;

@@ -1251,6 +1251,9 @@ void MainWindow::render(){
       }
     Resources::resetRecycled(cmdId);
 
+    if(auto* world = Gothic::inst().world())
+      world->refreshAnimationPose();
+
     if(video.isActive()) {
       video.paint(device,cmdId);
       uiLayer.clear();

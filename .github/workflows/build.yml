@@ -4,6 +4,9 @@ env:
   VK_SDK:       '1.4.357.0'
   BUILD_TYPE:   RelWithDebInfo
   BUILD_OFFSET: 3623  # continue from AppVeyor build numbers
+  # Exercise the optional animation path on this port branch without changing
+  # release behaviour if the workflow is later merged into master.
+  ANIMATION_CULLING: ${{ github.ref_name == 'android' && 'ON' || 'OFF' }}
 
 on:
   push:
@@ -54,7 +57,7 @@ jobs:
           echo 'gothic-linux-v${{ needs.setup.outputs.semver }}' >> build/opengothic/VERSION
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOPENGOTHIC_NPC_ANIMATION_CULLING=${{ env.ANIMATION_CULLING }}
 
       - name: Build
         run: cmake --build build --target Gothic2Notr Spacer -j $(nproc)
@@ -140,7 +143,7 @@ jobs:
           echo 'gothic-win64-v${{ needs.setup.outputs.semver }}' >> build/opengothic/VERSION
 
       - name: Configure
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOPENGOTHIC_NPC_ANIMATION_CULLING=${{ env.ANIMATION_CULLING }}
 
       - name: Build
         run: cmake --build build --target Gothic2Notr Spacer
@@ -179,7 +182,7 @@ jobs:
           echo 'gothic-osx-arm64-v${{ needs.setup.outputs.semver }}' >> build/opengothic/VERSION
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOPENGOTHIC_NPC_ANIMATION_CULLING=${{ env.ANIMATION_CULLING }}
 
       - name: Build
         run: cmake --build build --target Gothic2Notr Spacer -j $(sysctl -n hw.ncpu)
@@ -210,7 +213,7 @@ jobs:
           echo 'gothic-osx-x64-v${{ needs.setup.outputs.semver }}' >> build/opengothic/VERSION
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOPENGOTHIC_NPC_ANIMATION_CULLING=${{ env.ANIMATION_CULLING }}
 
       - name: Build
         run: cmake --build build --target Gothic2Notr Spacer -j $(sysctl -n hw.ncpu)

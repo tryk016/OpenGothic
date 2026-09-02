@@ -24,6 +24,13 @@ else()
   add_executable(Spacer)
 endif()
 
+option(OPENGOTHIC_NPC_ANIMATION_CULLING
+       "Skip full skeletal pose updates for distant offscreen NPCs" OFF)
+if(OPENGOTHIC_NPC_ANIMATION_CULLING)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    OPENGOTHIC_NPC_ANIMATION_CULLING=1)
+endif()
+
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)

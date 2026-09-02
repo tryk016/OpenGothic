@@ -15,6 +15,8 @@
 #include "utils/workers.h"
 #include "utils/dbgpainter.h"
 #include "gothic.h"
+#include "camera.h"
+#include "graphics/dynamic/frustrum.h"
 
 #include <Tempest/Painter>
 #include <Tempest/Application>
@@ -431,12 +433,47 @@ void WorldObjects::updateAnimation(uint64_t dt) {
     return;
   if(dt==0)
     return;
+#if defined(OPENGOTHIC_NPC_ANIMATION_CULLING)
+  const bool forceAll = owner.isInDialog() || owner.currentCs()!=nullptr;
+  Npc* const player = owner.player();
+  Workers::parallelTasks(npcArr,[dt,forceAll,player](std::unique_ptr<Npc>& i){
+    const bool playerRelevant = player!=nullptr &&
+                                (i->target()==player || player->target()==i.get());
+    const bool full = forceAll || i->isPlayer() || playerRelevant ||
+                      i->processPolicy()==NpcProcessPolicy::AiNormal;
+    i->updateAnimation(dt,false,full ? Npc::PoseUpdate::Full
+                                     : Npc::PoseUpdate::EventsOnly);
+    });
+  animationRefreshPending = false;
+  for(const auto& i:npcArr)
+    animationRefreshPending |= i->animationPoseDeferred();
+#else
   Workers::parallelTasks(npcArr,[dt](std::unique_ptr<Npc>& i){
     i->updateAnimation(dt);
     });
+#endif
   interactiveObj.parallelFor([dt](Interactive& i){
     i.updateAnimation(dt);
     });
+  }
+
+void WorldObjects::refreshAnimationPose() {
+#if defined(OPENGOTHIC_NPC_ANIMATION_CULLING)
+  if(!animationRefreshPending)
+    return;
+  animationRefreshPending = false;
+
+  Camera* const camera = Gothic::inst().camera();
+  if(camera==nullptr)
+    return;
+
+  Frustrum frustrum;
+  frustrum.make(camera->viewProj(),1,1);
+  Workers::parallelTasks(npcArr,[&frustrum](std::unique_ptr<Npc>& i){
+    if(i->animationPoseDeferred() && i->isInAnimationFrustrum(frustrum))
+      i->refreshAnimationPose();
+    });
+#endif
   }
 
 bool WorldObjects::isTargeted(Npc& dst) {

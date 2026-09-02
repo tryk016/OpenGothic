@@ -48,6 +48,7 @@ class Pose final {
 
     void               setObjectMatrix(const Tempest::Matrix4x4& obj, bool sync);
     bool               update(uint64_t tickCount, bool force);
+    void               advanceTimeWithoutPose(uint64_t tickCount);
 
     void               processLayers(AnimationSolver &solver, uint64_t tickCount);
     bool               processEvents(uint64_t& barrier, uint64_t now, Animation::EvCount &ev) const;

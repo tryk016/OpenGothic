@@ -351,6 +351,12 @@ bool Pose::update(uint64_t tickCount, bool force) {
   return false;
   }
 
+void Pose::advanceTimeWithoutPose(uint64_t tickCount) {
+  // Preserve the event barrier while deferring only the expensive bone build.
+  lastUpdate   = tickCount;
+  needToUpdate = true;
+  }
+
 bool Pose::updateFrame(const Animation::Sequence &s, BodyState bs, uint64_t sBlend,
                        uint64_t barrier, uint64_t sTime, uint64_t now) {
   auto&        d         = *s.data;
