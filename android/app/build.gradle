@@ -32,7 +32,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_shared', '-DANDROID=ON',
-                          '-DOPENGOTHIC_NPC_ANIMATION_CULLING=OFF'
+                          '-DOPENGOTHIC_NPC_ANIMATION_CULLING=ON'
                 // During migration, build only the GameActivity shared library.
                 // The full OpenGothic core is linked back in at the boot-to-menu gate.
                 targets 'Gothic2Notr'
