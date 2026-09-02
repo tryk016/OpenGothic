@@ -30,6 +30,10 @@ used by this port.
 6. **Production upscaler (complete):** FSR 1 EASU, with optional RCAS, runs
    after tone mapping and before native-resolution UI composition. Bilinear
    remains the fastest fallback on entry-level GPUs.
+7. **NPC skeletal-pose culling (complete):** distant NPCs outside the camera
+   frustum advance gameplay and animation events without rebuilding and
+   uploading an unused bone pose. Player-critical, combat, dialog, and
+   cutscene actors always keep full pose updates.
 
 CI migration builds are signed with the existing development key so they can
 update an installed test build without deleting game data. Migration version
@@ -126,6 +130,16 @@ without a fatal signal, ANR, or Vulkan device loss. FSR replaces the much more
 expensive Lanczos path, but it does not turn this GPU-limited scene into a
 stable 30 FPS workload; bilinear remains about 3 FPS faster.
 
+The skeletal-culling candidate was verified from the initial Xardas dialog into
+free movement. Dialog gestures, idle animation, and the first frame after a
+fast camera turn remained correct. It survived another 5 Home/resume plus 2
+screen-off/wake cycles with the same PID and no fatal signal, ANR, or Vulkan
+device loss. The free-world sample measured 27.46 FPS with a 32.64 ms median
+and 48.95 ms p95 frame time, used about 1.02 GiB PSS, and stayed at thermal
+status 0. This is a correctness sample from a two-NPC scene, not evidence of
+the expected CPU saving in a busy settlement; a fixed-camera, NPC-heavy A/B
+benchmark is still required before assigning an FPS gain to this change.
+
 The cold ASTC pass encoded 672 textures. On a warm launch all 672 were cache
 hits and none were re-encoded. The resident compressed texture payload was
 about 135 MiB instead of about 541 MiB for the RGBA fallback, while the
@@ -148,6 +162,22 @@ Future image-quality experiments may evaluate a negative material mip bias and
 low-resolution anti-aliasing before EASU. They are deliberately separate from
 this gate because both need broader sampler or render-pass changes and must be
 measured for shimmer and GPU cost.
+
+### NPC skeletal-pose culling
+
+`OPENGOTHIC_NPC_ANIMATION_CULLING` is a generic CMake option that defaults to
+`OFF`; the Android build enables it explicitly. When enabled, distant NPCs
+outside a conservatively expanded camera frustum skip bone interpolation,
+world-pose construction, and GPU pose upload. Their animation clock, solver,
+sound, particles, and timed effects continue to advance, and a newly visible
+NPC receives a full catch-up update before drawing.
+
+The player, normal-AI actors, the player's target and attacker, and every NPC
+participating in a dialog or active cutscene always receive full updates. This
+keeps the optimization independent of the renderer and Android APIs. The
+cross-platform CI jobs compile the enabled path on the `android` branch while
+the Linux package job compiles the default-disabled path; all non-Android
+release defaults remain unchanged.
 
 ## Android lifecycle contract
 
