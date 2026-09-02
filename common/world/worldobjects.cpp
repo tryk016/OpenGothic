@@ -436,10 +436,30 @@ void WorldObjects::updateAnimation(uint64_t dt) {
 #if defined(OPENGOTHIC_NPC_ANIMATION_CULLING)
   const bool forceAll = owner.isInDialog() || owner.currentCs()!=nullptr;
   Npc* const player = owner.player();
-  Workers::parallelTasks(npcArr,[dt,forceAll,player](std::unique_ptr<Npc>& i){
-    const bool playerRelevant = player!=nullptr &&
-                                (i->target()==player || player->target()==i.get());
-    const bool full = forceAll || i->isPlayer() || playerRelevant ||
+
+  Camera* const camera = Gothic::inst().camera();
+  Frustrum     frustrum;
+  const bool   hasFrustrum = camera!=nullptr;
+  if(hasFrustrum)
+    frustrum.make(camera->viewProj(),1,1);
+
+  // Combat and spell code queries source and target bones during the game
+  // tick. Never let either endpoint carry a deferred pose into the next tick.
+  animationPoseRequired.clear();
+  for(const auto& i:npcArr) {
+    Npc* const target = i->target();
+    if(target==nullptr && i->weaponState()==WeaponState::NoWeapon)
+      continue;
+    animationPoseRequired.push_back(i.get());
+    if(target!=nullptr)
+      animationPoseRequired.push_back(target);
+    }
+
+  const auto& poseRequired = animationPoseRequired;
+  Workers::parallelTasks(npcArr,[dt,forceAll,player,hasFrustrum,&frustrum,&poseRequired](std::unique_ptr<Npc>& i){
+    const bool gameplayRelevant = std::find(poseRequired.begin(),poseRequired.end(),i.get())!=poseRequired.end();
+    const bool visible = !hasFrustrum || i->isInAnimationFrustrum(frustrum);
+    const bool full = forceAll || i->isPlayer() || gameplayRelevant || visible ||
                       i->processPolicy()==NpcProcessPolicy::AiNormal;
     i->updateAnimation(dt,false,full ? Npc::PoseUpdate::Full
                                      : Npc::PoseUpdate::EventsOnly);
@@ -469,10 +489,11 @@ void WorldObjects::refreshAnimationPose() {
 
   Frustrum frustrum;
   frustrum.make(camera->viewProj(),1,1);
-  Workers::parallelTasks(npcArr,[&frustrum](std::unique_ptr<Npc>& i){
+  // Keep catch-up serial: attachments may read bones owned by another NPC.
+  for(auto& i:npcArr) {
     if(i->animationPoseDeferred() && i->isInAnimationFrustrum(frustrum))
       i->refreshAnimationPose();
-    });
+    }
 #endif
   }
 

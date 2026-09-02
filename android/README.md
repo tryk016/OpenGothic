@@ -32,8 +32,8 @@ used by this port.
    remains the fastest fallback on entry-level GPUs.
 7. **NPC skeletal-pose culling (complete):** distant NPCs outside the camera
    frustum advance gameplay and animation events without rebuilding and
-   uploading an unused bone pose. Player-critical, combat, dialog, and
-   cutscene actors always keep full pose updates.
+   uploading an unused bone pose. Visible, armed, targeted, dialog, cutscene,
+   nearby, and player actors always keep full pose updates.
 
 CI migration builds are signed with the existing development key so they can
 update an installed test build without deleting game data. Migration version
@@ -172,9 +172,11 @@ world-pose construction, and GPU pose upload. Their animation clock, solver,
 sound, particles, and timed effects continue to advance, and a newly visible
 NPC receives a full catch-up update before drawing.
 
-The player, normal-AI actors, the player's target and attacker, and every NPC
-participating in a dialog or active cutscene always receive full updates. This
-keeps the optimization independent of the renderer and Android APIs. The
+The player, nearby normal-AI actors, all visible actors, anyone holding a
+weapon, both ends of every NPC target relationship, and every NPC during a
+dialog or active cutscene always receive full updates. A post-camera catch-up
+is serial so an effect cannot read another NPC's bones while they are being
+rebuilt. This keeps the optimization independent of Android APIs. The
 cross-platform CI jobs compile the enabled path on the `android` branch while
 the Linux package job compiles the default-disabled path; all non-Android
 release defaults remain unchanged.
