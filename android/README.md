@@ -34,6 +34,9 @@ used by this port.
    frustum advance gameplay and animation events without rebuilding and
    uploading an unused bone pose. Visible, armed, targeted, dialog, cutscene,
    nearby, and player actors always keep full pose updates.
+8. **Launcher re-entry (complete):** reopening the app from its launcher
+   returns to the existing native game host instead of creating a second
+   engine and Vulkan surface in the same process.
 
 CI migration builds are signed with the existing development key so they can
 update an installed test build without deleting game data. Migration version
@@ -140,6 +143,13 @@ status 0. This is a correctness sample from a two-NPC scene, not evidence of
 the expected CPU saving in a busy settlement; a fixed-camera, NPC-heavy A/B
 benchmark is still required before assigning an FPS gain to this change.
 
+The final launcher-hardened APK from `96af4fcd` was then tested from a clean
+start through the menu and into the Xardas dialog. Five Home/launcher returns
+and two screen-off/wake returns kept PID 7485, the same single
+`GameHostActivity`, and correct character poses. The loaded scene continued to
+present about 24-25 FPS, used about 1.09 GiB PSS, stayed at thermal status 0,
+and produced no fatal signal, ANR, Vulkan device loss, or OOM.
+
 The cold ASTC pass encoded 672 textures. On a warm launch all 672 were cache
 hits and none were re-encoded. The resident compressed texture payload was
 about 135 MiB instead of about 541 MiB for the RGBA fallback, while the
@@ -191,6 +201,12 @@ has no native window. `APP_CMD_INIT_WINDOW` installs the replacement window and
 dispatches its real size, which recreates both `VkSurfaceKHR` and the Vulkan
 swapchain. Active touch state is cancelled when the app is suspended.
 
+The storage-permission launcher starts the native host with Android's
+`CLEAR_TOP` and `SINGLE_TOP` flags. On first launch this creates the host; when
+the icon is used for an existing task, Android removes the transient launcher
+and delivers the intent to the existing host. This prevents two native engines
+from owning surfaces in one process.
+
 OpenGothic treats a zero-sized swapchain as a suspended state and does not
 update camera or cursor geometry until a real surface returns. Android remains
 fixed to landscape by the manifest. The Vulkan swapchain currently requests an
@@ -204,6 +220,13 @@ performance candidate was additionally tested in the loaded world with 5
 Home/resume and 2 screen-off/wake cycles; all seven transitions kept the same
 PID and produced no fatal signal or ANR. The final device log contained no
 surface-loss or device-loss entry.
+
+The SM-X115 framework emits recurring `BLASTBufferQueue` max-acquired-frame
+warnings even on a clean first launch. They are not treated as a lifecycle
+failure by themselves: the same clean-start sample continued to present about
+61 menu frames per second and accepted input. A failed gate still requires a
+stalled presentation stream, lost input, process replacement, ANR, fatal
+signal, device loss, or more than one live game host.
 
 The verified Tempest integration point is `b0004eef`. Android and the full
 Windows, Linux, Linux package, macOS x64, and macOS ARM64 CI matrix must pass
