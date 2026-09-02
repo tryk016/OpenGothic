@@ -31,8 +31,8 @@ void main() {
 
   vec3 minRing = min(min(b,d),min(f,h));
   vec3 maxRing = max(max(b,d),max(f,h));
-  vec3 hitMin  = min(minRing,e)/max(4.0*maxRing,vec3(1.0/65536.0));
-  vec3 hitMax  = (1.0-max(maxRing,e))/min(4.0*minRing-4.0,vec3(-1.0/65536.0));
+  vec3 hitMin  = min(minRing,e)/max(4.0*maxRing,vec3(1.0/16384.0));
+  vec3 hitMax  = (1.0-max(maxRing,e))/min(4.0*minRing-4.0,vec3(-1.0/16384.0));
   vec3 lobes   = max(-hitMin,hitMax);
 
   float lobe = clamp(max(lobes.r,max(lobes.g,lobes.b)),-3.0/16.0,0.0);

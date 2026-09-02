@@ -12,13 +12,13 @@ precision highp int;
 layout(binding = 0) uniform sampler2D src;
 
 layout(push_constant, std140) uniform PushConstant {
-  vec2 outputSize;
+  highp vec2 outputSize;
   } push;
 
 layout(location = 0) out vec4 outColor;
 
 float safeRcp(float value) {
-  return 1.0/max(value, 1.0/65536.0);
+  return 1.0/max(value, 1.0/16384.0);
   }
 
 vec3 loadClamped(ivec2 pixel) {
@@ -53,14 +53,13 @@ void addTap(inout vec3 color, inout float weight, vec2 offset,
   }
 
 vec3 easu(uvec2 pixel) {
-  vec2 inputSize = vec2(textureSize(src,0));
-  vec2 scale     = inputSize/push.outputSize;
+  highp vec2 inputSize = vec2(textureSize(src,0));
+  highp vec2 scale = inputSize/push.outputSize;
+  highp vec2 sourcePos = vec2(pixel)*scale+0.5*scale-0.5;
+  highp vec2 basePos = floor(sourcePos);
+  vec2 pp = vec2(sourcePos-basePos);
 
-  vec2 pp = vec2(pixel)*scale+0.5*scale-0.5;
-  vec2 fp = floor(pp);
-  pp -= fp;
-
-  ivec2 base = ivec2(fp);
+  ivec2 base = ivec2(basePos);
   vec3 b = loadClamped(base+ivec2( 0,-1));
   vec3 c = loadClamped(base+ivec2( 1,-1));
   vec3 e = loadClamped(base+ivec2(-1, 0));
