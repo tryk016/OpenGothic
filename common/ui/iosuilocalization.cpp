@@ -93,8 +93,7 @@ CFStringEncoding textEncoding(ScriptLang language) {
 // digit, which would otherwise be consumed by the C++ escape.
 const LanguageText& textFor(ScriptLang language) {
   static const LanguageText en = {
-    {"Device settings", "Frame rate", "Off",
-     "Frame rate is controlled by the parent configuration", "Back"},
+    {"Device settings", "Frame rate", "Off", "Back"},
     {
       "Controller layout",
       "Draw bow / Block / Aim",
@@ -118,9 +117,7 @@ const LanguageText& textFor(ScriptLang language) {
     }
   };
   static const LanguageText de = {
-    {"Ger\xE4teeinstellungen", "Bildrate", "Aus",
-     "Bildrate wird von der \xFC" "bergeordneten Konfiguration gesteuert",
-     "Zur\xFC" "ck"},
+    {"Ger\xE4teeinstellungen", "Bildrate", "Aus", "Zur\xFC" "ck"},
     {
       "Controller-Belegung",
       "Bogen ziehen / Blocken / Zielen",
@@ -145,7 +142,6 @@ const LanguageText& textFor(ScriptLang language) {
   };
   static const LanguageText pl = {
     {"Ustawienia urz\xB9" "dzenia", "Limit FPS", "Wy\xB3\xB9" "czony",
-     "Limit FPS jest ustawiony przez konfiguracj\xEA nadrz\xEA" "dn\xB9",
      "Powr\xF3t"},
     {
       "Uk\xB3" "ad kontrolera",
@@ -173,7 +169,6 @@ const LanguageText& textFor(ScriptLang language) {
     {"\xCD\xE0\xF1\xF2\xF0\xEE\xE9\xEA\xE8 \xF3\xF1\xF2\xF0\xEE\xE9\xF1\xF2\xE2\xE0",
      "\xD7\xE0\xF1\xF2\xEE\xF2\xE0 \xEA\xE0\xE4\xF0\xEE\xE2",
      "\xC2\xFB\xEA\xEB.",
-     "\xD7\xE0\xF1\xF2\xEE\xF2\xE0 \xEA\xE0\xE4\xF0\xEE\xE2 \xE7\xE0\xE4\xE0\xED\xE0 \xF0\xEE\xE4\xE8\xF2\xE5\xEB\xFC\xF1\xEA\xEE\xE9 \xEA\xEE\xED\xF4\xE8\xE3\xF3\xF0\xE0\xF6\xE8\xE5\xE9",
      "\xCD\xE0\xE7\xE0\xE4"},
     {
       "\xD0\xE0\xF1\xEA\xEB\xE0\xE4\xEA\xE0 \xEA\xEE\xED\xF2\xF0\xEE\xEB\xEB\xE5\xF0\xE0",
@@ -199,7 +194,7 @@ const LanguageText& textFor(ScriptLang language) {
   };
   static const LanguageText fr = {
     {"R\xE9glages de l'appareil", "Fr\xE9quence d'images", "D\xE9sactiv\xE9",
-     "La configuration parente contr\xF4le la fr\xE9quence d'images", "Retour"},
+     "Retour"},
     {
       "Disposition de la manette",
       "Arc / Parade / Vis\xE9" "e",
@@ -224,7 +219,7 @@ const LanguageText& textFor(ScriptLang language) {
   };
   static const LanguageText es = {
     {"Configuraci\xF3n del dispositivo", "Frecuencia de fotogramas", "Desactivado",
-     "La configuraci\xF3n superior controla la frecuencia de fotogramas", "Atr\xE1s"},
+     "Atr\xE1s"},
     {
       "Distribuci\xF3n del mando",
       "Tensar arco / Bloquear / Apuntar",
@@ -248,8 +243,7 @@ const LanguageText& textFor(ScriptLang language) {
     }
   };
   static const LanguageText it = {
-    {"Impostazioni dispositivo", "Frequenza fotogrammi", "Disattivato",
-     "La configurazione principale controlla la frequenza fotogrammi", "Indietro"},
+    {"Impostazioni dispositivo", "Frequenza fotogrammi", "Disattivato", "Indietro"},
     {
       "Mappatura controller",
       "Tendi arco / Parata / Mira",
@@ -274,7 +268,6 @@ const LanguageText& textFor(ScriptLang language) {
   };
   static const LanguageText cz = {
     {"Nastaven\xED za\xF8\xEDzen\xED", "Sn\xEDmkov\xE1 frekvence", "Vypnuto",
-     "Sn\xEDmkovou frekvenci \xF8\xED" "d\xED nad\xF8" "azen\xE1 konfigurace",
      "Zp\xECt"},
     {
       "Rozlo\x9E" "en\xED ovlada\xE8" "e",

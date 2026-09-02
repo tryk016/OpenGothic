@@ -196,8 +196,7 @@ int main(int argc,const char** argv) {
   catch(const std::exception& e) {
     // Any other failure may have happened after the window was created and is
     // being torn down by stack-unwinding. Do NOT spin up a second Application
-    // over a half-destroyed window (would drive render on a dangling pointer —
-    // see review B7); just report and exit.
+    // over a half-destroyed window; just report and exit.
     Tempest::Log::e("fatal: ", e.what());
     SystemMsg::fatal("Fatal error", e.what());
     return 1;

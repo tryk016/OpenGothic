@@ -7,7 +7,6 @@
 // desktop builds compile this TU empty.
 #if defined(__MOBILE_PLATFORM__)
 
-#include <Tempest/Application>
 #include <Tempest/Event>
 #include <cmath>
 #include <algorithm>
@@ -45,6 +44,13 @@ constexpr float slopedAxisThreshold(float deadZone, float crossAxis,
 static_assert(slopedAxisThreshold(0.25f, 0.960f, 0.12f)>0.269f);
 static_assert(slopedAxisThreshold(0.25f,-0.948f, 0.12f)>0.304f);
 static_assert(slopedAxisThreshold(0.25f, 0.269f, 0.12f)<0.960f);
+
+bool hasButtonEvent(const std::vector<GamepadButtonEvent>& events,
+                    GamepadButton button, bool pressed) {
+  return std::any_of(events.begin(),events.end(),[button,pressed](const auto& event) {
+    return event.button==button && event.pressed==pressed;
+    });
+  }
 }
 
 GamepadInput::GamepadInput(MainWindow& owner, PlayerControl& ctrl)
@@ -193,12 +199,7 @@ void GamepadInput::tickRing(
   r.updateSelection(s.rx, s.ry);
   owner.update();
 
-  auto pressed = [&](GamepadButton button) {
-    return std::any_of(events.begin(),events.end(),[&](const auto& event) {
-      return event.button==button && event.pressed;
-      });
-    };
-  if(pressed(GamepadButton::B) || (s.b && !prev.b)) {
+  if(hasButtonEvent(events,GamepadButton::B,true) || (s.b && !prev.b)) {
     ringCancel();
     return;
     }
@@ -218,15 +219,17 @@ void GamepadInput::tickRing(
       }
     return;
     }
-  if(pressed(GamepadButton::DpadUp) || (s.dup && !prev.dup)) {
+  if(hasButtonEvent(events,GamepadButton::DpadUp,true) ||
+     (s.dup && !prev.dup)) {
     openRing(ringItems);
     return;
     }
-  if(pressed(GamepadButton::DpadDown) || (s.ddown && !prev.ddown)) {
+  if(hasButtonEvent(events,GamepadButton::DpadDown,true) ||
+     (s.ddown && !prev.ddown)) {
     openRing(ringWeapons);
     return;
     }
-  if(pressed(GamepadButton::A) || (s.a && !prev.a) ||
+  if(hasButtonEvent(events,GamepadButton::A,true) || (s.a && !prev.a) ||
      (s.rt>trigThresh && prev.rt<=trigThresh)) {
     activateRingSelection(r);
     return;
@@ -330,9 +333,7 @@ void GamepadInput::key(bool now, bool before, Event::KeyType k) {
     }
   }
 
-void GamepadInput::keyTap(Event::KeyType k, PadCtx,
-                          const GamepadButtonEvent&,
-                          const GamepadState&) {
+void GamepadInput::keyTap(Event::KeyType k) {
   Tempest::KeyEvent ev(k);
   owner.dispatchKey(ev);
   }
@@ -341,8 +342,6 @@ void GamepadInput::tickWorldSystemButtons(
     const GamepadState& s, const std::vector<GamepadButtonEvent>& events) {
   using B = PadSystemGesture::Button;
   using E = PadSystemGesture::Effect;
-  const uint64_t now = Tempest::Application::tickCount();
-
   auto dispatch = [&](E effect) {
     if(effect==E::None)
       return false;
@@ -359,7 +358,7 @@ void GamepadInput::tickWorldSystemButtons(
     };
 
   auto feed = [&](B button, bool pressed) {
-    return dispatch(systemGesture.onButton(button,pressed,now));
+    return dispatch(systemGesture.onButton(button,pressed));
     };
 
   // Queue order preserves taps entirely contained between two game frames.
@@ -379,7 +378,6 @@ void GamepadInput::tickWorldSystemButtons(
     return;
   if(systemGesture.down(B::Menu)!=s.menu && feed(B::Menu,s.menu))
     return;
-  dispatch(systemGesture.tick(now));
   }
 
 void GamepadInput::suppressCarriedWorldInput() {
@@ -450,7 +448,7 @@ void GamepadInput::tick(uint64_t dt) {
     suppressCarriedWorldInput();
     observedInputGen = inputGen;
     }
-  if(!s.connected) {                 // pad vanished mid-hold -> release everything (B5)
+  if(!s.connected) {                 // pad vanished mid-hold -> release everything
     if(prev.connected) {
       releaseAllWorld();
       ringCancel();
@@ -520,7 +518,7 @@ void GamepadInput::tick(uint64_t dt) {
   switch(ctx) {
     case PadCtx::World:     tickWorld(dt, s, input.events);  break;
     case PadCtx::Dialog:    tickDialog(s, input.events);     break;
-    case PadCtx::Inventory: tickInvent(dt, s, input.events); break;
+    case PadCtx::Inventory: tickInvent(s, input.events);     break;
     case PadCtx::Menu:      tickMenu(s, input.events);       break;
     case PadCtx::Loading:                      break;
     }
@@ -531,13 +529,8 @@ void GamepadInput::tick(uint64_t dt) {
 
 void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
                              const std::vector<GamepadButtonEvent>& events) {
-  auto pressed = [&](GamepadButton button) {
-    return std::any_of(events.begin(),events.end(),[&](const auto& event) {
-      return event.button==button && event.pressed;
-      });
-    };
   auto pressedOrEdge = [&](GamepadButton button, bool now, bool before) {
-    return pressed(button) || (now && !before);
+    return hasButtonEvent(events,button,true) || (now && !before);
     };
 
   // Two independent modal quick-rings. Once opened, tickRing captures every
@@ -555,27 +548,13 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
   // never block A/B/RT, and one axis must not disable the other.
   if(suppressLookUntilNeutral && std::hypot(s.rx,s.ry)<=analogDeadZone)
     suppressLookUntilNeutral = false;
-  const bool aReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::A && !event.pressed;
-    });
-  const bool bReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::B && !event.pressed;
-    });
-  const bool xReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::X && !event.pressed;
-    });
-  const bool lbReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::LB && !event.pressed;
-    });
-  const bool rbReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::RB && !event.pressed;
-    });
-  const bool ltReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::LT && !event.pressed;
-    });
-  const bool rtReleased = std::any_of(events.begin(),events.end(),[](const auto& event) {
-    return event.button==GamepadButton::RT && !event.pressed;
-    });
+  const bool aReleased  = hasButtonEvent(events,GamepadButton::A, false);
+  const bool bReleased  = hasButtonEvent(events,GamepadButton::B, false);
+  const bool xReleased  = hasButtonEvent(events,GamepadButton::X, false);
+  const bool lbReleased = hasButtonEvent(events,GamepadButton::LB,false);
+  const bool rbReleased = hasButtonEvent(events,GamepadButton::RB,false);
+  const bool ltReleased = hasButtonEvent(events,GamepadButton::LT,false);
+  const bool rtReleased = hasButtonEvent(events,GamepadButton::RT,false);
   if(suppressAUntilRelease && (!s.a || aReleased))
     suppressAUntilRelease = false;
   if(suppressBUntilRelease && (!s.b || bReleased))
@@ -868,10 +847,10 @@ void GamepadInput::tickDialog(const GamepadState& s,
     if(!event.pressed)
       continue;
     switch(event.button) {
-      case GamepadButton::DpadUp:   keyTap(Event::K_Up,     PadCtx::Dialog, event, s); break;
-      case GamepadButton::DpadDown: keyTap(Event::K_Down,   PadCtx::Dialog, event, s); break;
-      case GamepadButton::A:        keyTap(Event::K_Return, PadCtx::Dialog, event, s); break;
-      case GamepadButton::B:        keyTap(Event::K_ESCAPE, PadCtx::Dialog, event, s); break;
+      case GamepadButton::DpadUp:   keyTap(Event::K_Up);     break;
+      case GamepadButton::DpadDown: keyTap(Event::K_Down);   break;
+      case GamepadButton::A:        keyTap(Event::K_Return); break;
+      case GamepadButton::B:        keyTap(Event::K_ESCAPE); break;
       default: break;
       }
     }
@@ -907,25 +886,22 @@ void GamepadInput::tickMenu(const GamepadState& s,
         }
       }
     switch(event.button) {
-      case GamepadButton::DpadUp:    keyTap(Event::K_Up,     PadCtx::Menu, event, s); break;
-      case GamepadButton::DpadDown:  keyTap(Event::K_Down,   PadCtx::Menu, event, s); break;
-      case GamepadButton::DpadLeft:  keyTap(Event::K_Left,   PadCtx::Menu, event, s); break;
-      case GamepadButton::DpadRight: keyTap(Event::K_Right,  PadCtx::Menu, event, s); break;
-      case GamepadButton::A:         keyTap(Event::K_Return, PadCtx::Menu, event, s); break;
+      case GamepadButton::DpadUp:    keyTap(Event::K_Up);     break;
+      case GamepadButton::DpadDown:  keyTap(Event::K_Down);   break;
+      case GamepadButton::DpadLeft:  keyTap(Event::K_Left);   break;
+      case GamepadButton::DpadRight: keyTap(Event::K_Right);  break;
+      case GamepadButton::A:         keyTap(Event::K_Return); break;
       case GamepadButton::B:
-      case GamepadButton::Menu:      keyTap(Event::K_ESCAPE, PadCtx::Menu, event, s); break;
+      case GamepadButton::Menu:      keyTap(Event::K_ESCAPE); break;
       default: break;
       }
     }
   }
 
-void GamepadInput::tickInvent(uint64_t dt, const GamepadState& s,
+void GamepadInput::tickInvent(const GamepadState& s,
                               const std::vector<GamepadButtonEvent>& events) {
-  (void)dt;
   const bool openAssignment = (s.r3 && !prev.r3) ||
-    std::any_of(events.begin(),events.end(),[](const auto& event) {
-      return event.button==GamepadButton::R3 && event.pressed;
-      });
+                              hasButtonEvent(events,GamepadButton::R3,true);
   if(openAssignment) {
     openItemAssignmentRing();
     return;
@@ -953,14 +929,14 @@ void GamepadInput::tickInvent(uint64_t dt, const GamepadState& s,
     if(!event.pressed)
       continue;
     switch(event.button) {
-      case GamepadButton::DpadUp:   keyTap(Event::K_Up,     PadCtx::Inventory, event, s); break;
-      case GamepadButton::DpadDown: keyTap(Event::K_Down,   PadCtx::Inventory, event, s); break;
-      case GamepadButton::DpadLeft: keyTap(Event::K_Left,   PadCtx::Inventory, event, s); break;
-      case GamepadButton::DpadRight:keyTap(Event::K_Right,  PadCtx::Inventory, event, s); break;
-      case GamepadButton::A:       keyTap(Event::K_Return, PadCtx::Inventory, event, s); break;
+      case GamepadButton::DpadUp:   keyTap(Event::K_Up);     break;
+      case GamepadButton::DpadDown: keyTap(Event::K_Down);   break;
+      case GamepadButton::DpadLeft: keyTap(Event::K_Left);   break;
+      case GamepadButton::DpadRight:keyTap(Event::K_Right);  break;
+      case GamepadButton::A:        keyTap(Event::K_Return); break;
       case GamepadButton::B:
       case GamepadButton::Menu:
-      case GamepadButton::Options: keyTap(Event::K_ESCAPE, PadCtx::Inventory, event, s); break;
+      case GamepadButton::Options:  keyTap(Event::K_ESCAPE); break;
       default: break;
       }
     }

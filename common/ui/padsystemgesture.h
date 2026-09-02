@@ -29,48 +29,31 @@ class PadSystemGesture final {
       return state(button).down;
       }
 
-    constexpr Effect onButton(Button button, bool pressed, uint64_t) {
+    constexpr Effect onButton(Button button, bool pressed) {
       State& current = state(button);
       if(pressed) {
         if(current.down)
           return Effect::None;
         current.down = true;
-        if(current.phase==Phase::Suppressed)
+        if(current.suppressed)
           return Effect::None;
-        current.phase = Phase::Consumed;
         return button==Button::View ? Effect::Inventory : Effect::GameMenu;
         }
 
-      if(!current.down) {
-        if(current.phase==Phase::Suppressed)
-          current.phase = Phase::Idle;
-        return Effect::None;
-        }
-
       current.down = false;
-      current.phase = Phase::Idle;
-      return Effect::None;
-      }
-
-    constexpr Effect tick(uint64_t) {
+      current.suppressed = false;
       return Effect::None;
       }
 
   private:
-    enum class Phase : uint8_t {
-      Idle,
-      Consumed,
-      Suppressed,
-      };
-
     struct State {
-      bool     down  = false;
-      Phase    phase = Phase::Idle;
+      bool down       = false;
+      bool suppressed = false;
       };
 
     static constexpr void reset(State& value, bool held) {
-      value.down  = held;
-      value.phase = held ? Phase::Suppressed : Phase::Idle;
+      value.down       = held;
+      value.suppressed = held;
       }
 
     constexpr State& state(Button button) {
@@ -90,29 +73,28 @@ constexpr bool padSystemGestureCompileTests() {
   using E = PadSystemGesture::Effect;
   PadSystemGesture g;
 
-  if(g.onButton(B::View,true,0)!=E::Inventory ||
-     g.onButton(B::View,false,1)!=E::None)
+  if(g.onButton(B::View,true)!=E::Inventory ||
+     g.onButton(B::View,false)!=E::None)
     return false;
 
   g.reset();
-  if(g.onButton(B::View,true,100)!=E::Inventory ||
-     g.tick(700)!=E::None ||
-     g.onButton(B::View,false,701)!=E::None)
+  if(g.onButton(B::View,true)!=E::Inventory ||
+     g.onButton(B::View,false)!=E::None)
     return false;
 
   g.reset();
-  if(g.onButton(B::Menu,true,1000)!=E::GameMenu ||
-     g.onButton(B::Menu,false,1001)!=E::None)
+  if(g.onButton(B::Menu,true)!=E::GameMenu ||
+     g.onButton(B::Menu,false)!=E::None)
     return false;
 
   // A system button carried back from another context cannot immediately
   // reopen a page; it has to return to neutral first.
   g.reset(true,true);
-  if(g.onButton(B::View,false,2000)!=E::None ||
-     g.onButton(B::Menu,false,2000)!=E::None)
+  if(g.onButton(B::View,false)!=E::None ||
+     g.onButton(B::Menu,false)!=E::None)
     return false;
-  if(g.onButton(B::View,true,2100)!=E::Inventory ||
-     g.onButton(B::View,false,2101)!=E::None)
+  if(g.onButton(B::View,true)!=E::Inventory ||
+     g.onButton(B::View,false)!=E::None)
     return false;
   return true;
   }

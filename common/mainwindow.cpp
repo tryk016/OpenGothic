@@ -881,7 +881,7 @@ void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp)
     const int r  = std::max(10,int(18*scale));
     const int t  = std::max(2, int(2*scale));
     const int l  = std::max(4, int(8*scale));
-    p.setBrush(Color(1.f,0.43f,0.43f,0.9f));         // (255,110,110) lock tint (spec 5.4)
+    p.setBrush(Color(1.f,0.43f,0.43f,0.9f));
     p.drawRect(cx-r,   cy-r,   l, t); p.drawRect(cx-r,   cy-r,   t, l); // top-left
     p.drawRect(cx+r-l, cy-r,   l, t); p.drawRect(cx+r-t, cy-r,   t, l); // top-right
     p.drawRect(cx-r,   cy+r-t, l, t); p.drawRect(cx-r,   cy+r-l, t, l); // bottom-left

@@ -91,7 +91,6 @@ DeviceSettings::Layout DeviceSettings::layout() const {
 
   ret.titleBaseline      = ret.panel.y+11*ret.panel.h/100;
   ret.frameRateBaseline  = ret.panel.y+25*ret.panel.h/100;
-  ret.controlledBaseline = ret.panel.y+51*ret.panel.h/100;
   ret.languageBaseline   = ret.panel.y+64*ret.panel.h/100;
 
   ret.frameRateRow = {innerX,ret.panel.y+18*ret.panel.h/100,
@@ -119,13 +118,6 @@ DeviceSettings::Layout DeviceSettings::layout() const {
   return ret;
   }
 
-bool DeviceSettings::isFrameRateLocked() const {
-  // The native iOS selector is the user-facing authority. SystemPack's
-  // FPS_Limit remains authoritative on desktop, but must not turn these
-  // visibly interactive mobile buttons into no-ops.
-  return false;
-  }
-
 int DeviceSettings::frameRate() const {
   const int fps = Gothic::settingsGetI("ENGINE","zMaxFps");
   for(const int value:rates)
@@ -135,8 +127,6 @@ int DeviceSettings::frameRate() const {
   }
 
 void DeviceSettings::setFrameRate(int value) {
-  if(isFrameRateLocked())
-    return;
   if(value!=0 && value!=30 && value!=60)
     value = 30;
   Gothic::settingsSetI("ENGINE","zMaxFps",value);
@@ -145,7 +135,7 @@ void DeviceSettings::setFrameRate(int value) {
   }
 
 void DeviceSettings::cycleFrameRate(int direction) {
-  if(isFrameRateLocked() || direction==0)
+  if(direction==0)
     return;
   int index = 1;
   const int current = frameRate();
@@ -228,15 +218,13 @@ void DeviceSettings::mouseDownEvent(MouseEvent& event) {
     }
   const Layout geometry = layout();
   const Point pos = event.pos();
-  if(!isFrameRateLocked()) {
-    for(size_t i=0; i<std::size(rates); ++i)
-      if(geometry.frameRateButtons[i].contains(pos.x,pos.y)) {
-        selectedRow = Row::FrameRate;
-        setFrameRate(rates[i]);
-        event.accept();
-        return;
-        }
-    }
+  for(size_t i=0; i<std::size(rates); ++i)
+    if(geometry.frameRateButtons[i].contains(pos.x,pos.y)) {
+      selectedRow = Row::FrameRate;
+      setFrameRate(rates[i]);
+      event.accept();
+      return;
+      }
   if(geometry.languageButton.contains(pos.x,pos.y)) {
     selectedRow = Row::Language;
     cycleLanguage(1);
@@ -322,13 +310,11 @@ void DeviceSettings::paintEvent(PaintEvent& event) {
   uiFont.drawText(p,geometry.panel.x+geometry.gap,geometry.titleBaseline,txt.title);
   uiFont.drawText(p,geometry.panel.x+geometry.gap,geometry.frameRateBaseline,txt.frameRate);
 
-  const bool locked = isFrameRateLocked();
   const int  current = frameRate();
   for(size_t i=0; i<std::size(rates); ++i) {
     const Box& button = geometry.frameRateButtons[i];
     const bool selected = current==rates[i];
-    const Color color = locked ? Color(0.20f,0.20f,0.22f,0.85f) :
-                        selected ? Color(0.64f,0.48f,0.18f,0.95f) :
+    const Color color = selected ? Color(0.64f,0.48f,0.18f,0.95f) :
                                    Color(0.20f,0.20f,0.24f,0.95f);
     p.setBrush(color);
     p.drawRect(button.x,button.y,button.w,button.h);
@@ -337,32 +323,6 @@ void DeviceSettings::paintEvent(PaintEvent& event) {
     uiFont.drawText(p,button.x+(button.w-sz.w)/2,
                     button.y+(button.h+sz.h)/2,label);
     }
-  if(locked) {
-    string_frm message(txt.controlled," (",current," FPS)");
-    const std::string prepared = uiFont.prepareText(message);
-    const int maxWidth = geometry.panel.w-2*geometry.gap;
-    size_t split = prepared.size();
-    for(size_t at=prepared.find(' '); at!=std::string::npos;
-        at=prepared.find(' ',at+1)) {
-      if(uiFont.textSizePrepared(prepared.substr(0,at)).w<=maxWidth)
-        split = at;
-      else
-        break;
-      }
-    if(uiFont.textSizePrepared(prepared).w<=maxWidth || split==prepared.size()) {
-      uiFont.drawTextPrepared(p,geometry.panel.x+geometry.gap,
-                              geometry.controlledBaseline,prepared);
-      }
-    else {
-      uiFont.drawTextPrepared(p,geometry.panel.x+geometry.gap,
-                              geometry.controlledBaseline,
-                              prepared.substr(0,split));
-      uiFont.drawTextPrepared(p,geometry.panel.x+geometry.gap,
-                              geometry.controlledBaseline+uiFont.pixelSize(),
-                              prepared.substr(split+1));
-      }
-    }
-
   uiFont.drawText(p,geometry.panel.x+geometry.gap,geometry.languageBaseline,"UI");
   const int selection = IosUiLocalization::languageSelection();
   string_frm languageLabel;
