@@ -41,6 +41,15 @@ class Renderer final {
       Epipolar,
       PathTrace,
       };
+    enum class Diagnostic : uint8_t {
+      None,
+      FreezeSky,
+      FreezeVisibility,
+      DisableOpaque,
+      DisableWater,
+      DisablePointLights,
+      Count,
+      };
     Tempest::Size internalResolution(Tempest::Size src) const;
     float         internalResolutionScale() const;
 
@@ -151,9 +160,13 @@ class Renderer final {
       float          fogResolutionScale = 1;
       float          fsrSharpness       = 0.2f;
       uint8_t        upscaleFilter      = 0;
+      Diagnostic     diagnostic         = Diagnostic::None;
 
       float          vsmMipBias         = 0.25; //TODO: set to lower, eventually
       } settings;
+
+    bool                      diagnosticSkyPrepared       = false;
+    bool                      diagnosticVisibilityFrozen = false;
 
     Frustrum                  frustrum[SceneGlobals::V_Count];
     Tempest::Matrix4x4        proj, viewProj, viewProjLwc;

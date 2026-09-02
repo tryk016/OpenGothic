@@ -17,6 +17,11 @@ on:
           - '0'
           - '1'
           - '4'
+      renderer_diagnostics:
+        description: Enable test-only renderer isolation profiles from Gothic.ini
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -57,7 +62,8 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease \
             -PbuildNum=${{ github.run_number }} \
-            -PbenchmarkSave=${{ github.event.inputs.benchmark_save || '0' }}
+            -PbenchmarkSave=${{ github.event.inputs.benchmark_save || '0' }} \
+            -PrendererDiagnostics=${{ github.event.inputs.renderer_diagnostics || 'false' }}
 
       - name: Validate generated shaders
         run: |

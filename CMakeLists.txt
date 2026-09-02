@@ -35,6 +35,13 @@ if(OPENGOTHIC_NPC_ANIMATION_CULLING)
     OPENGOTHIC_NPC_ANIMATION_CULLING=1)
 endif()
 
+option(OPENGOTHIC_RENDER_DIAGNOSTICS
+       "Enable test-only renderer isolation profiles" OFF)
+if(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    OPENGOTHIC_RENDER_DIAGNOSTICS=1)
+endif()
+
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)

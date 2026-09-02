@@ -159,6 +159,14 @@ void Renderer::setupSettings() {
     settings.resolutionScale = std::max(settings.resolutionScale,0.5f); // FSR 1 supports up to 4x area scaling
   settings.fogResolutionScale = std::clamp(Gothic::inst().settingsGetF("INTERNAL", "fogResolutionScale"),
                                            0.25f, 1.f);
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  const int diagnostic = std::clamp(Gothic::inst().settingsGetI("INTERNAL", "renderDiagnostic"),
+                                    0, int(Diagnostic::Count)-1);
+  settings.diagnostic = Diagnostic(diagnostic);
+  diagnosticSkyPrepared       = false;
+  diagnosticVisibilityFrozen = false;
+  Log::i("Renderer diagnostic profile = ",diagnostic);
+#endif
   settings.aaEnabled     = (Gothic::options().aaPreset>0) && (settings.resolutionScale>=1.f);
   static const char* const upscaleNames[] = {"Lanczos", "bilinear", "FSR 1"};
   Log::i("Internal resolution scale = ", settings.resolutionScale,
@@ -526,6 +534,10 @@ void Renderer::resetSkyFog() {
   }
 
 void Renderer::prepareSky(Tempest::Encoder<Tempest::CommandBuffer>& cmd, WorldView& wview) {
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::FreezeSky && diagnosticSkyPrepared)
+    return;
+#endif
   auto& scene   = wview.sceneGlobals();
 
   cmd.setDebugMarker("Sky LUT");
@@ -580,6 +592,11 @@ void Renderer::prepareSky(Tempest::Encoder<Tempest::CommandBuffer>& cmd, WorldVi
   cmd.setPushData(&sz, sizeof(sz));
   cmd.setPipeline(shaders.skyViewCldLut);
   cmd.draw(nullptr, 0, 3);
+
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::FreezeSky)
+    diagnosticSkyPrepared = true;
+#endif
   }
 
 void Renderer::draw(Attachment& result, Encoder<CommandBuffer>& cmd, uint8_t fId,
@@ -695,13 +712,21 @@ void Renderer::draw(Tempest::Attachment& result, Encoder<CommandBuffer>& cmd, ui
     return;
     }
 
-  wview.visibilityPass(cmd, 0);
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  const bool freezeVisibility = settings.diagnostic==Diagnostic::FreezeVisibility &&
+                                diagnosticVisibilityFrozen;
+#else
+  constexpr bool freezeVisibility = false;
+#endif
+  if(!freezeVisibility)
+    wview.visibilityPass(cmd, 0);
   prepareSky(cmd, wview);
 
   drawHiZ (cmd, wview);
   buildHiZ(cmd);
 
-  wview.visibilityPass(cmd, 1);
+  if(!freezeVisibility)
+    wview.visibilityPass(cmd, 1);
   drawGBuffer(cmd, fId, wview);
 
   drawShadowMap(cmd, fId, wview);
@@ -770,6 +795,10 @@ void Renderer::draw(Tempest::Attachment& result, Encoder<CommandBuffer>& cmd, ui
   //drawHashDbg(result, cmd, wview);
 
   wview.postFrameupdate();
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::FreezeVisibility)
+    diagnosticVisibilityFrozen = true;
+#endif
   }
 
 void Renderer::drawTonemapping(Attachment& result, Encoder<CommandBuffer>& cmd, const WorldView& wview) {
@@ -1752,10 +1781,18 @@ void Renderer::drawGBuffer(Encoder<CommandBuffer>& cmd, uint8_t fId, WorldView& 
   cmd.setFramebuffer({{gbufDiffuse, Tempest::Vec4(), Tempest::Preserve},
                       {gbufNormal,  Tempest::Vec4(), Tempest::Preserve}},
                      {zbuffer, Tempest::Preserve, Tempest::Preserve});
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::DisableOpaque)
+    return;
+#endif
   view.drawGBuffer(cmd,fId);
   }
 
 void Renderer::drawGWater(Encoder<CommandBuffer>& cmd, WorldView& view) {
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::DisableWater)
+    return;
+#endif
   static bool water = true;
   if(!water)
     return;
@@ -1771,6 +1808,10 @@ void Renderer::drawGWater(Encoder<CommandBuffer>& cmd, WorldView& view) {
   }
 
 void Renderer::drawReflections(Encoder<CommandBuffer>& cmd, const WorldView& wview) {
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::DisableWater)
+    return;
+#endif
   auto& pso = settings.zEnvMappingEnabled ? shaders.waterReflectionSSR : shaders.waterReflection;
 
   cmd.setDebugMarker("Reflections");
@@ -1864,6 +1905,10 @@ void Renderer::drawShadowResolve(Encoder<CommandBuffer>& cmd, const WorldView& w
   }
 
 void Renderer::drawLights(Encoder<CommandBuffer>& cmd, const WorldView& wview) {
+#if defined(OPENGOTHIC_RENDER_DIAGNOSTICS)
+  if(settings.diagnostic==Diagnostic::DisablePointLights)
+    return;
+#endif
   static bool light = true;
   if(!light)
     return;
