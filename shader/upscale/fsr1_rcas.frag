@@ -35,9 +35,8 @@ void main() {
   vec3 hitMax  = (1.0-max(maxRing,e))/min(4.0*minRing-4.0,vec3(-1.0/16384.0));
   vec3 lobes   = max(-hitMin,hitMax);
 
-  float lobe = clamp(max(lobes.r,max(lobes.g,lobes.b)),-3.0/16.0,0.0);
-  float strength = exp2(-2.0*(1.0-clamp(push.sharpness,0.0,1.0)));
-  lobe *= strength;
+  float lobe = clamp(max(lobes.r,max(lobes.g,lobes.b)),-3.0/16.0,0.0)
+               *clamp(push.sharpness,0.0,1.0);
 
   vec3 color = (lobe*(b+d+f+h)+e)/(4.0*lobe+1.0);
   outColor = vec4(clamp(color,0.0,1.0),1.0);

@@ -27,9 +27,9 @@ used by this port.
    shadow resolution, internal resolution, upscaling filter, and volumetric
    fog resolution. The selected profile is stable but does not yet hold
    30 FPS.
-6. **Production upscaler (next):** integrate FSR 1 EASU, with optional RCAS,
-   after tone mapping and before UI composition. The current bilinear path is
-   a fast baseline and fallback, not the intended final image-quality path.
+6. **Production upscaler (complete):** FSR 1 EASU, with optional RCAS, runs
+   after tone mapping and before native-resolution UI composition. Bilinear
+   remains the fastest fallback on entry-level GPUs.
 
 CI migration builds are signed with the existing development key so they can
 update an installed test build without deleting game data. Migration version
@@ -37,7 +37,7 @@ codes start at 100000, above the legacy repository's published builds, and add
 the workflow run number so every successful CI build remains upgradeable.
 CI migration builds remain workflow artifacts. This repository does not yet
 publish or update a public `latest-android` release; release publishing stays
-disabled until Adreno is retested and the production-upscaler gate is complete.
+disabled until Adreno is retested and physical-device qualification is complete.
 
 The application is fixed to landscape. A full game-data installation contains
 all three original directories:
@@ -48,9 +48,9 @@ all three original directories:
 /sdcard/OpenGothic/Gothic2/system
 ```
 
-## Verified Helio G99 profile
+## Verified Helio G99 profiles
 
-The current physical-device profile is:
+The performance profile remains:
 
 ```ini
 ; /sdcard/OpenGothic/Gothic.ini
@@ -64,6 +64,20 @@ upscaleFilter=1
 shadowResolution=512
 ```
 
+For a sharper image at a measured performance cost, use the FSR 1 quality
+profile:
+
+```ini
+[INTERNAL]
+resolutionScale=0.5
+fogResolutionScale=0.5
+upscaleFilter=2
+fsrSharpness=0
+
+[ENGINE]
+shadowResolution=512
+```
+
 `/sdcard/OpenGothic/Gothic2/system/SystemPack.ini` also uses
 `FPS_Limit=30`. The existing low-cost Android options disable SSAO,
 reflections, wind, expensive water effects, and similar desktop-oriented
@@ -71,7 +85,10 @@ effects.
 
 `resolutionScale` and `fogResolutionScale` are clamped to `0.25..1.0`.
 Setting `resolutionScale=0` preserves the old `vidResIndex` mapping.
-`upscaleFilter=0` selects the existing Lanczos path and `1` selects bilinear.
+`upscaleFilter=0` selects the existing Lanczos path, `1` selects bilinear, and
+`2` selects FSR 1. `fsrSharpness=0` runs EASU without an extra pass; values in
+`0..1` continuously increase optional RCAS sharpening. FSR clamps internal
+resolution to at least 50%, its documented maximum 4x area upscale.
 `shadowResolution` is clamped to `128..4096`; the cross-platform default
 remains 2048. All new defaults preserve existing Windows, Linux, macOS, and
 iOS behaviour.
@@ -92,6 +109,10 @@ rejecting each change.
 | 35% internal, bilinear, 512 shadows | 25.54 | rejected: large quality loss for small gain |
 | 50% internal, bilinear, 50% fog LUT, 512 shadows | 24.55 | selected profile |
 | 50% internal, bilinear, 25% fog LUT, 512 shadows | 24.01 | rejected: no gain |
+| 50% internal, same-run bilinear control | 24.17 | fastest fallback |
+| 50% internal, FSR 1 EASU, full float | 20.99 | correct image, kept as reference |
+| 50% internal, FSR 1 EASU, relaxed filter precision | 21.23 | selected quality profile |
+| 50% internal, FSR 1 EASU + RCAS pass | 19.89 | optional; too costly for this device |
 
 Reducing shadows from 512 to 256 changed 15.26 FPS to only 15.48 FPS, so 512
 is retained. The selected profile had a 32.75 ms median frame time and a
@@ -99,23 +120,34 @@ is retained. The selected profile had a 32.75 ms median frame time and a
 the limiting component, while memory and thermals stayed safe during these
 short acceptance runs.
 
+The final FSR EASU sample ran at thermal status 0, used about 1.20 GiB PSS,
+and survived 5 Home/resume plus 2 screen-off/wake cycles with the same PID and
+without a fatal signal, ANR, or Vulkan device loss. FSR replaces the much more
+expensive Lanczos path, but it does not turn this GPU-limited scene into a
+stable 30 FPS workload; bilinear remains about 3 FPS faster.
+
 The cold ASTC pass encoded 672 textures. On a warm launch all 672 were cache
 hits and none were re-encoded. The resident compressed texture payload was
 about 135 MiB instead of about 541 MiB for the RGBA fallback, while the
 persistent `/sdcard/OpenGothic/astc-v2` cache occupied about 164 MiB. Loaded
 world samples used roughly 1.14-1.35 GiB PSS without an OOM or device loss.
 
-### Next renderer step
+### FSR 1 integration
 
 The existing Lanczos path performs many full-resolution texture samples and
-is disproportionately expensive on Mali-G57. The next gate should use
-[AMD FidelityFX Super Resolution 1](https://gpuopen.com/fidelityfx-superresolution/):
-tone-map the low-resolution HDR scene into a perceptual intermediate, run EASU
-to the display resolution, optionally run RCAS, and then draw the UI at native
-resolution. This keeps the integration spatial and Vulkan-friendly without
-requiring motion vectors, jitter, history, depth, or extra temporal passes.
+is disproportionately expensive on Mali-G57. The implemented
+[AMD FidelityFX Super Resolution 1](https://gpuopen.com/fidelityfx-superresolution/)
+path tone-maps the low-resolution HDR scene into a perceptual intermediate,
+runs EASU to the display resolution, optionally runs RCAS, and then draws the
+UI at native resolution. This keeps the integration spatial and Vulkan-friendly
+without requiring motion vectors, jitter, history, depth, or temporal passes.
 Arm ASR/NSS remains out of scope for this stage because those temporal inputs
 would require a substantially larger renderer rewrite.
+
+Future image-quality experiments may evaluate a negative material mip bias and
+low-resolution anti-aliasing before EASU. They are deliberately separate from
+this gate because both need broader sampler or render-pass changes and must be
+measured for shimmer and GPU cost.
 
 ## Android lifecycle contract
 
@@ -141,6 +173,6 @@ Home/resume and 2 screen-off/wake cycles; all seven transitions kept the same
 PID and produced no fatal signal or ANR. The final device log contained no
 surface-loss or device-loss entry.
 
-The Android build and the full Windows, Linux, Linux package, macOS x64, and
-macOS ARM64 CI matrix passed for OpenGothic `27e42805`. The verified Tempest
-integration point is `b0004eef`.
+The verified Tempest integration point is `b0004eef`. Android and the full
+Windows, Linux, Linux package, macOS x64, and macOS ARM64 CI matrix must pass
+before each renderer gate is considered closed.

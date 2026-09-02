@@ -47,7 +47,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease -PbuildNum=${{ github.run_number }}
 
-      - name: Validate generated slot shaders
+      - name: Validate generated shaders
         run: |
           set -Eeuo pipefail
           shader_root="android/app/.cxx"
@@ -57,24 +57,39 @@ jobs:
           for abi in arm64-v8a x86_64; do
             mapfile -d '' -t shaders < <(
               find "$shader_root" -type f -path "*/${abi}/*" \
-                \( -name '*_slot.*.sprv' -o -name 'main_pfx*.frag.sprv' \) \
+                \( -name '*_slot.*.sprv' -o -name 'main_pfx*.frag.sprv' \
+                   -o -name 'fsr1_*.frag.sprv' \) \
                 -print0 | sort -z
               )
             if (( ${#shaders[@]} == 0 )); then
-              echo "::error title=Missing ${abi} slot shaders::No slot shaders were generated."
+              echo "::error title=Missing ${abi} shaders::No validation-target shaders were generated."
               exit 1
             fi
 
+            slot_count=0
+            has_easu=false
+            has_rcas=false
             for shader in "${shaders[@]}"; do
               spirv-val "$shader"
-              disassembly="$temp_dir/shader.spvasm"
-              spirv-dis "$shader" -o "$disassembly"
-              if grep -qE 'OpCapability[[:space:]]+(RuntimeDescriptorArray(EXT)?|ShaderNonUniform(EXT)?)([[:space:]]|$)' "$disassembly"; then
-                echo "::error file=${shader},title=Forbidden slot capability::Slot shader requires bindless descriptor indexing."
-                exit 1
-              fi
+              case "$(basename "$shader")" in
+                fsr1_easu.frag.sprv) has_easu=true ;;
+                fsr1_rcas.frag.sprv) has_rcas=true ;;
+                *)
+                  ((slot_count+=1))
+                  disassembly="$temp_dir/shader.spvasm"
+                  spirv-dis "$shader" -o "$disassembly"
+                  if grep -qE 'OpCapability[[:space:]]+(RuntimeDescriptorArray(EXT)?|ShaderNonUniform(EXT)?)([[:space:]]|$)' "$disassembly"; then
+                    echo "::error file=${shader},title=Forbidden slot capability::Slot shader requires bindless descriptor indexing."
+                    exit 1
+                  fi
+                  ;;
+              esac
             done
-            echo "Validated ${#shaders[@]} ${abi} slot shaders."
+            if (( slot_count == 0 )) || ! $has_easu || ! $has_rcas; then
+              echo "::error title=Incomplete ${abi} shader set::Expected slot, FSR1 EASU, and FSR1 RCAS shaders."
+              exit 1
+            fi
+            echo "Validated ${#shaders[@]} ${abi} shaders."
           done
 
       - name: Verify native libraries
