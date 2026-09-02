@@ -94,7 +94,12 @@ class MainActivity : Activity() {
         if (gameStarted)
             return
         gameStarted = true
-        startActivity(Intent(this, GameHostActivity::class.java))
+        startActivity(Intent(this, GameHostActivity::class.java).apply {
+            // Reuse the native host when the launcher icon brings an existing
+            // game task back to the foreground. A second GameActivity would
+            // create another engine and Vulkan surface in the same process.
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        })
         finish()
     }
 
