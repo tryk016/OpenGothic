@@ -4,6 +4,10 @@ plugins {
 }
 
 def migrationBuildNumber = (project.findProperty('buildNum') ?: '0').toInteger()
+def benchmarkSave = (project.findProperty('benchmarkSave') ?: '0').toInteger()
+if (benchmarkSave < 0 || benchmarkSave > 15) {
+    throw new GradleException('benchmarkSave must be between 0 and 15')
+}
 
 android {
     namespace 'opengothic.gothic2'
@@ -32,7 +36,8 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_shared', '-DANDROID=ON',
-                          '-DOPENGOTHIC_NPC_ANIMATION_CULLING=ON'
+                          '-DOPENGOTHIC_NPC_ANIMATION_CULLING=ON',
+                          "-DOPENGOTHIC_ANDROID_BENCHMARK_SAVE=${benchmarkSave}"
                 // During migration, build only the GameActivity shared library.
                 // The full OpenGothic core is linked back in at the boot-to-menu gate.
                 targets 'Gothic2Notr'

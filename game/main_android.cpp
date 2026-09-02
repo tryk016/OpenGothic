@@ -6,8 +6,13 @@
 
 #include "system/api/androidapi.h"
 
+#include <cstdio>
 #include <exception>
 #include <unistd.h>
+
+#ifndef OPENGOTHIC_ANDROID_BENCHMARK_SAVE
+#define OPENGOTHIC_ANDROID_BENCHMARK_SAVE 0
+#endif
 
 namespace {
 constexpr const char* GameRoot = "/sdcard/OpenGothic";
@@ -27,9 +32,16 @@ extern "C" void android_main(android_app* app) {
   if(::chdir(GameRoot)!=0)
     Tempest::Log::e("Unable to use Android game directory: ",GameRoot);
 
-  const char* argv[] = {"opengothic","-g",GameData};
+  char        saveSlot[4] = {};
+  const char* argv[] = {"opengothic","-g",GameData,"-save",saveSlot};
+  int         argc = 3;
+#if OPENGOTHIC_ANDROID_BENCHMARK_SAVE > 0
+  std::snprintf(saveSlot,sizeof(saveSlot),"%d",OPENGOTHIC_ANDROID_BENCHMARK_SAVE);
+  argc = 5;
+  Tempest::Log::i("Android benchmark autoloads save slot ",saveSlot);
+#endif
   try {
-    (void)runOpenGothic(3,argv);
+    (void)runOpenGothic(argc,argv);
     }
   catch(const std::exception& e) {
     Tempest::Log::e("Fatal Android startup error: ",e.what());

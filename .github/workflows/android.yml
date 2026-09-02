@@ -7,6 +7,16 @@ on:
       - '**.md'
       - 'docs/**'
   workflow_dispatch:
+    inputs:
+      benchmark_save:
+        description: Save slot to autoload in a profiling build (0 keeps normal startup)
+        required: true
+        default: '0'
+        type: choice
+        options:
+          - '0'
+          - '1'
+          - '4'
 
 permissions:
   contents: read
@@ -45,7 +55,9 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.7
           chmod +x gradlew
-          ./gradlew assembleRelease -PbuildNum=${{ github.run_number }}
+          ./gradlew assembleRelease \
+            -PbuildNum=${{ github.run_number }} \
+            -PbenchmarkSave=${{ github.event.inputs.benchmark_save || '0' }}
 
       - name: Validate generated shaders
         run: |

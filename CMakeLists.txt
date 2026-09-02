@@ -18,6 +18,10 @@ if(ANDROID)
   add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL)
   # GameActivity loads this target with System.loadLibrary("Gothic2Notr").
   add_library(Gothic2Notr SHARED)
+  set(OPENGOTHIC_ANDROID_BENCHMARK_SAVE "0" CACHE STRING
+      "Save slot autoloaded by Android benchmark builds (0 disables autoload)")
+  target_compile_definitions(Gothic2Notr PRIVATE
+    OPENGOTHIC_ANDROID_BENCHMARK_SAVE=${OPENGOTHIC_ANDROID_BENCHMARK_SAVE})
 else()
   add_library(${PROJECT_NAME} STATIC)
   add_executable(Gothic2Notr)
