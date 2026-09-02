@@ -13,7 +13,11 @@ set(CMAKE_SKIP_RPATH ON)
 
 add_library(${PROJECT_NAME} STATIC)
 add_executable(Gothic2Notr)
-add_executable(Spacer)
+if(IOS)
+  add_executable(Spacer EXCLUDE_FROM_ALL)
+else()
+  add_executable(Spacer)
+endif()
 
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
