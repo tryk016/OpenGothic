@@ -174,7 +174,8 @@ APIs. Its principal integration areas are:
 - UIKit scene activation, backgrounding and display-link scheduling;
 - controller snapshots, touch input, safe-area layout and haptics;
 - iOS audio-session setup;
-- working-directory-first access to user data with application-bundle fallback;
+- explicit container paths for writable settings and saves, with packaged
+  resources resolved relative to the application bundle;
 - Metal swapchain, upscaler and startup-library options exposed through Tempest;
 - fence-safe save-preview capture and recovery when a preview cannot be made.
 

@@ -27,7 +27,7 @@ For SideStore (recommended):
 
 AltStore and other clients compatible with AltStore sources can use the same
 `apps.json`. The IPA can also be downloaded directly from the
-[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.1-spatial)
+[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.2-spatial)
 and selected manually in the sideloading client. Free Apple-account signatures
 normally need periodic refresh; follow the selected client's current setup and
 refresh instructions.
@@ -186,9 +186,10 @@ Copy the files using one of the platform file-sharing paths available to you:
 - the Files app on iOS or iPadOS, for example from iCloud Drive or external
   storage.
 
-OpenGothic checks the working directory for `Data`, `_work/Data` and compiled
-scripts. If required data is not found, the application presents an error
-instead of starting a world. Correct the directory layout and launch it again.
+On iOS, OpenGothic validates `Data`, `_work/Data` and the compiled scripts under
+the application's `Documents` directory. If required data is not found, the
+application presents an error instead of starting a world. Correct the
+directory layout and launch it again.
 
 ## Configuration and saves
 
