@@ -153,7 +153,8 @@ Gothic::Gothic() {
   defaults->set("ENGINE",       "shadowResolution", 2048);
   defaults->set("INTERNAL",     "vidResIndex", 0); // full-res
   defaults->set("INTERNAL",     "resolutionScale", 0.f); // 0 keeps the legacy vidResIndex mapping
-  defaults->set("INTERNAL",     "upscaleFilter", 0);      // 0: Lanczos, 1: bilinear
+  defaults->set("INTERNAL",     "upscaleFilter", 0);      // 0: Lanczos, 1: bilinear, 2: FSR 1
+  defaults->set("INTERNAL",     "fsrSharpness",  0.2f);   // 0: EASU only, 1: strongest RCAS
   defaults->set("INTERNAL",     "fogResolutionScale", 1.f);
 
   defaults->set("VIDEO", "zVidBrightness", 0.5f);

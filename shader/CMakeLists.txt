@@ -234,6 +234,8 @@ add_shader(sky_exposure.comp         lighting/sky_exposure.comp)
 
 add_shader(tonemapping.frag          lighting/tonemapping.frag)
 add_shader(tonemapping_up.frag       lighting/tonemapping.frag -DUPSCALE)
+add_shader(fsr1_easu.frag             upscale/fsr1_easu.frag)
+add_shader(fsr1_rcas.frag             upscale/fsr1_rcas.frag)
 
 add_shader(water_reflection.mesh     water/water_reflection.mesh)
 add_shader(water_reflection.frag     water/water_reflection.frag)

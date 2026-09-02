@@ -153,12 +153,17 @@ void Renderer::setupSettings() {
     settings.resolutionScale = 0.5f;
     }
 
-  settings.upscaleFilter = uint8_t(std::clamp(Gothic::inst().settingsGetI("INTERNAL", "upscaleFilter"), 0, 1));
+  settings.upscaleFilter = uint8_t(std::clamp(Gothic::inst().settingsGetI("INTERNAL", "upscaleFilter"), 0, 2));
+  settings.fsrSharpness  = std::clamp(Gothic::inst().settingsGetF("INTERNAL", "fsrSharpness"), 0.f, 1.f);
+  if(settings.upscaleFilter==2)
+    settings.resolutionScale = std::max(settings.resolutionScale,0.5f); // FSR 1 supports up to 4x area scaling
   settings.fogResolutionScale = std::clamp(Gothic::inst().settingsGetF("INTERNAL", "fogResolutionScale"),
                                            0.25f, 1.f);
   settings.aaEnabled     = (Gothic::options().aaPreset>0) && (settings.resolutionScale>=1.f);
+  static const char* const upscaleNames[] = {"Lanczos", "bilinear", "FSR 1"};
   Log::i("Internal resolution scale = ", settings.resolutionScale,
-         " upscale filter = ", settings.upscaleFilter==0 ? "Lanczos" : "bilinear");
+         " upscale filter = ", upscaleNames[settings.upscaleFilter],
+         settings.upscaleFilter==2 ? string_frm(" sharpness = ",settings.fsrSharpness) : "");
 
   const int shadowResolution = Gothic::inst().settingsGetI("ENGINE", "shadowResolution");
   settings.shadowResolution = uint32_t(std::clamp(shadowResolution, 128, 4096));
@@ -421,6 +426,8 @@ void Renderer::resetViewport(Tempest::Size res, Tempest::Size fullRes) {
 
   gbufDiffuse   = device.attachment(TextureFormat::RGBA8,w,h);
   gbufNormal    = device.attachment(TextureFormat::R32U, w,h);
+
+  fsr1 = decltype(fsr1)();
 
   ssao     = decltype(ssao)();
   epipolar = decltype(epipolar)();
@@ -782,16 +789,47 @@ void Renderer::drawTonemapping(Attachment& result, Encoder<CommandBuffer>& cmd, 
   if(mul>0)
     p.mul = mul;
 
-  const bool upscale  = settings.resolutionScale<1.f;
+  auto toneMap = [&](Attachment& target, RenderPipeline& pipeline, const Sampler& sampler) {
+    cmd.setFramebuffer({{target, Tempest::Discard, Tempest::Preserve}});
+    cmd.setBinding(0, wview.sceneGlobals().uboGlobal[SceneGlobals::V_Main]);
+    cmd.setBinding(1, sceneLinear, sampler);
+    cmd.setPushData(p);
+    cmd.setPipeline(pipeline);
+    cmd.draw(nullptr,0,3);
+    };
+
+  const bool upscale = settings.resolutionScale<1.f;
+  if(upscale && settings.upscaleFilter==2) {
+    auto& tonemapped = usesAttachment(fsr1.tonemapped,TextureFormat::RGBA8,sceneLinear.size());
+    toneMap(tonemapped,shaders.tonemapping,Sampler::nearest(ClampMode::ClampToEdge));
+
+    Attachment* easuTarget = &result;
+    if(settings.fsrSharpness>0.f)
+      easuTarget = &usesAttachment(fsr1.upscaled,TextureFormat::RGBA8,result.size());
+
+    const Vec2 outputSize(float(result.w()),float(result.h()));
+    cmd.setDebugMarker("FSR 1 EASU");
+    cmd.setFramebuffer({{*easuTarget,Tempest::Discard,Tempest::Preserve}});
+    cmd.setBinding(0,tonemapped,Sampler::nearest(ClampMode::ClampToEdge));
+    cmd.setPushData(&outputSize,sizeof(outputSize));
+    cmd.setPipeline(shaders.fsr1Easu);
+    cmd.draw(nullptr,0,3);
+
+    if(settings.fsrSharpness>0.f) {
+      cmd.setDebugMarker("FSR 1 RCAS");
+      cmd.setFramebuffer({{result,Tempest::Discard,Tempest::Preserve}});
+      cmd.setBinding(0,fsr1.upscaled,Sampler::nearest(ClampMode::ClampToEdge));
+      cmd.setPushData(&settings.fsrSharpness,sizeof(settings.fsrSharpness));
+      cmd.setPipeline(shaders.fsr1Rcas);
+      cmd.draw(nullptr,0,3);
+      }
+    return;
+    }
+
   const bool bilinear = upscale && settings.upscaleFilter==1;
-  auto& pso = (!upscale || bilinear) ? shaders.tonemapping : shaders.tonemappingUpscale;
-  cmd.setFramebuffer({ {result, Tempest::Discard, Tempest::Preserve} });
-  cmd.setBinding(0, wview.sceneGlobals().uboGlobal[SceneGlobals::V_Main]);
-  cmd.setBinding(1, sceneLinear, bilinear ? Sampler::bilinear(ClampMode::ClampToEdge)
-                                          : Sampler::nearest(ClampMode::ClampToEdge));
-  cmd.setPushData(p);
-  cmd.setPipeline(pso);
-  cmd.draw(nullptr, 0, 3);
+  auto& pipeline = (!upscale || bilinear) ? shaders.tonemapping : shaders.tonemappingUpscale;
+  toneMap(result,pipeline,bilinear ? Sampler::bilinear(ClampMode::ClampToEdge)
+                                   : Sampler::nearest(ClampMode::ClampToEdge));
   }
 
 void Renderer::drawCMAA2(Tempest::Attachment& result, Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview) {

@@ -149,6 +149,7 @@ class Renderer final {
       float          vidResIndex        = 0;
       float          resolutionScale    = 1;
       float          fogResolutionScale = 1;
+      float          fsrSharpness       = 0.2f;
       uint8_t        upscaleFilter      = 0;
 
       float          vsmMipBias         = 0.25; //TODO: set to lower, eventually
@@ -161,6 +162,10 @@ class Renderer final {
     Tempest::Vec3             clipInfo;
 
     Tempest::Attachment       sceneLinear;
+    struct {
+      Tempest::Attachment     tonemapped;
+      Tempest::Attachment     upscaled;
+      } fsr1;
     Tempest::ZBuffer          zbuffer, shadowMap[Resources::ShadowLayers];
     Tempest::ZBuffer          zbufferUi;
 

@@ -163,6 +163,8 @@ void Shaders::compileShaders() {
 
   tonemapping        = postEffect("triangle_uv", "tonemapping",    RenderState::ZTestMode::Always);
   tonemappingUpscale = postEffect("triangle_uv", "tonemapping_up", RenderState::ZTestMode::Always);
+  fsr1Easu           = postEffect("fsr1_easu", RenderState::ZTestMode::Always);
+  fsr1Rcas           = postEffect("fsr1_rcas", RenderState::ZTestMode::Always);
 
   cmaa2EdgeColor2x2Presets[uint32_t(AaPreset::OFF)]    = Tempest::ComputePipeline();
   cmaa2EdgeColor2x2Presets[uint32_t(AaPreset::MEDIUM)] = computeShader("cmaa2_edges_color2x2_quality_0.comp.sprv");
