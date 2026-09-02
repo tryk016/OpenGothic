@@ -435,7 +435,6 @@ void WorldObjects::updateAnimation(uint64_t dt) {
     return;
 #if defined(OPENGOTHIC_NPC_ANIMATION_CULLING)
   const bool forceAll = owner.isInDialog() || owner.currentCs()!=nullptr;
-  Npc* const player = owner.player();
 
   Camera* const camera = Gothic::inst().camera();
   Frustrum     frustrum;
@@ -456,7 +455,7 @@ void WorldObjects::updateAnimation(uint64_t dt) {
     }
 
   const auto& poseRequired = animationPoseRequired;
-  Workers::parallelTasks(npcArr,[dt,forceAll,player,hasFrustrum,&frustrum,&poseRequired](std::unique_ptr<Npc>& i){
+  Workers::parallelTasks(npcArr,[dt,forceAll,hasFrustrum,&frustrum,&poseRequired](std::unique_ptr<Npc>& i){
     const bool gameplayRelevant = std::find(poseRequired.begin(),poseRequired.end(),i.get())!=poseRequired.end();
     const bool visible = !hasFrustrum || i->isInAnimationFrustrum(frustrum);
     const bool full = forceAll || i->isPlayer() || gameplayRelevant || visible ||
