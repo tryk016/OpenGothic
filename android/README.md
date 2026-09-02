@@ -139,9 +139,17 @@ fast camera turn remained correct. It survived another 5 Home/resume plus 2
 screen-off/wake cycles with the same PID and no fatal signal, ANR, or Vulkan
 device loss. The free-world sample measured 27.46 FPS with a 32.64 ms median
 and 48.95 ms p95 frame time, used about 1.02 GiB PSS, and stayed at thermal
-status 0. This is a correctness sample from a two-NPC scene, not evidence of
-the expected CPU saving in a busy settlement; a fixed-camera, NPC-heavy A/B
-benchmark is still required before assigning an FPS gain to this change.
+status 0.
+
+A fixed-camera follow-up used save slot 4 at Khorinis harbour, looking over the
+water from the same saved position. The archive contained 1056 serialized NPCs.
+Three 20-second SurfaceFlinger samples with skeletal culling enabled measured
+21.769, 22.081, and 22.091 FPS (21.98 average). Rebuilding only the Android
+target with culling disabled measured 21.350, 21.397, and 21.405 FPS (21.38
+average). Culling therefore recovered 0.60 FPS, or 2.8%, in this workload --
+about 1.27 ms per presented frame. Both variants stayed at thermal status 0,
+reported no dropped SurfaceFlinger frames, and used about 1.20 GiB PSS. The
+gain is modest but repeatable, so Android keeps the option enabled.
 
 The final launcher-hardened APK from `96af4fcd` was then tested from a clean
 start through the menu and into the Xardas dialog. Five Home/launcher returns
