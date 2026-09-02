@@ -99,7 +99,7 @@ vec3 easu(uvec2 pixel) {
   setDirection(dir,len,v,gL,jL,kL,lL,oL);
 
   float dirSq = dot(dir,dir);
-  if(dirSq<1.0/32768.0)
+  if(dirSq<1.0/16384.0)
     dir = vec2(1.0,0.0);
   else
     dir *= inversesqrt(dirSq);
