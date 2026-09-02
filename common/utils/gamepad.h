@@ -58,6 +58,7 @@ struct GamepadInputFrame {
   };
 
 namespace Gamepad {
+void initialize();
 GamepadState poll();
 GamepadInputFrame consume();
 }

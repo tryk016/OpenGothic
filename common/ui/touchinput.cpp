@@ -9,7 +9,6 @@
 
 #include <Tempest/Painter>
 #include <Tempest/Event>
-#include <Tempest/Application>
 #include <algorithm>
 
 #include "game/playercontrol.h"
@@ -315,7 +314,6 @@ void TouchInput::tick() {
     releaseWorldTouches();
     return;
     }
-  dispatchSystemEffect(systemGesture.tick(Application::tickCount()));
   }
 
 void TouchInput::paintEvent(PaintEvent& e) {
@@ -503,14 +501,14 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
             if(viewId<0) {
               viewId = id;
               dispatchSystemEffect(systemGesture.onButton(
-                  PadSystemGesture::Button::View,true,Application::tickCount()));
+                  PadSystemGesture::Button::View,true));
               }
             return;
           case TAct::SystemMenu:
             if(menuId<0) {
               menuId = id;
               dispatchSystemEffect(systemGesture.onButton(
-                  PadSystemGesture::Button::Menu,true,Application::tickCount()));
+                  PadSystemGesture::Button::Menu,true));
               }
             return;
           }
@@ -638,7 +636,7 @@ void TouchInput::mouseUpEvent(MouseEvent& e) {
       return false;
     touchId = -1;
     dispatchSystemEffect(systemGesture.onButton(
-        button,false,Application::tickCount()));
+        button,false));
     return true;
     };
   if(releaseSystem(viewId,PadSystemGesture::Button::View) ||

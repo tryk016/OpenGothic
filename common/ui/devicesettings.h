@@ -48,12 +48,10 @@ class DeviceSettings final : public Tempest::Widget {
       int               gap=0;
       int               titleBaseline=0;
       int               frameRateBaseline=0;
-      int               controlledBaseline=0;
       int               languageBaseline=0;
       };
 
     Layout        layout() const;
-    bool          isFrameRateLocked() const;
     int           frameRate() const;
     void          setFrameRate(int value);
     void          cycleFrameRate(int direction);

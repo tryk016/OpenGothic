@@ -3,10 +3,10 @@
 #include <Tempest/Application>
 #include <Tempest/Device>
 #include <Tempest/Log>
+#include <cassert>
 
 #if defined(__IOS__)
 #include <chrono>
-#include <Tempest/IOSRuntime>
 #endif
 
 #include "gothic.h"
@@ -33,42 +33,62 @@ Shaders::Shaders() {
   }
 
 Shaders::~Shaders() {
-  deferredCompilation.wait();
+  if(deferredCompilation.valid())
+    deferredCompilation.wait();
   instance = nullptr;
   }
 
 void Shaders::waitCompiler() {
-#if defined(__IOS__)
-  using namespace std::chrono_literals;
-  while(deferredCompilation.wait_for(10ms)!=std::future_status::ready)
-    Tempest::iOS::yieldToUIKit();
-#else
+  if(compilerState==CompilerState::Ready)
+    return;
+  if(compilerState==CompilerState::Failed)
+    std::rethrow_exception(compilerError);
   deferredCompilation.wait();
-#endif
-  // shared_future::get() can be called more than once and, unlike wait(),
-  // propagates a compiler exception before an empty pipeline reaches Encoder.
-  deferredCompilation.get();
+  completeCompiler();
+  }
+
+void Shaders::completeCompiler() {
+  if(compilerState!=CompilerState::Pending)
+    return;
+  try {
+    deferredCompilation.get();
+    compilerState = CompilerState::Ready;
+    }
+  catch(...) {
+    compilerError = std::current_exception();
+    compilerState = CompilerState::Failed;
+    throw;
+    }
   }
 
 Shaders& Shaders::inst(bool waitCompiler) {
+  assert(instance!=nullptr);
   if(waitCompiler)
     instance->waitCompiler();
   return *instance;
   }
 
 const RenderPipeline& Shaders::binkPipeline() {
-  return instance->bink;
+  return inst(false).bink;
   }
 
 const RenderPipeline& Shaders::downscalePipeline() {
-  return instance->downscale;
+  return inst(false).downscale;
   }
 
 #if defined(__IOS__)
 bool Shaders::isCompilerReady() {
   if(instance==nullptr || !instance->deferredCompilation.valid())
     return false;
-  return instance->deferredCompilation.wait_for(std::chrono::seconds(0))==std::future_status::ready;
+  const auto state = instance->compilerState;
+  if(state==CompilerState::Ready)
+    return true;
+  if(state==CompilerState::Failed)
+    return false;
+  if(instance->deferredCompilation.wait_for(std::chrono::seconds(0))!=std::future_status::ready)
+    return false;
+  instance->completeCompiler();
+  return instance->compilerState==CompilerState::Ready;
   }
 #endif
 
@@ -223,9 +243,6 @@ void Shaders::compileShaders() {
 
   tonemapping        = postEffect("triangle_uv", "tonemapping",    RenderState::ZTestMode::Always);
   tonemappingUpscale = postEffect("triangle_uv", "tonemapping_up", RenderState::ZTestMode::Always);
-#if defined(OPENGOTHIC_METALFX_TEMPORAL)
-  metalFxMotion      = postEffect("triangle", "metalfx_motion", RenderState::ZTestMode::Always);
-#endif
 
   cmaa2EdgeColor2x2Presets[uint32_t(AaPreset::OFF)] = Tempest::ComputePipeline();
   if(compileCmaa2) {
@@ -248,6 +265,29 @@ void Shaders::compileShaders() {
       auto fs = device.shader(sh.data,sh.len);
       cmaa2DeferredColorApply2x2 = device.pipeline(Tempest::Points,RenderState(),vs,fs);
     }
+  }
+
+  {
+    RenderState state;
+    auto sh = GothicShader::get("gizmo.vert.sprv");
+    auto vs = device.shader(sh.data,sh.len);
+    sh = GothicShader::get("gizmo.frag.sprv");
+    auto fs = device.shader(sh.data,sh.len);
+    gizmo = device.pipeline(Triangles,state,vs,fs);
+  }
+  {
+    RenderState state;
+    state.setZTestMode    (RenderState::ZTestMode::Less);
+    state.setZWriteEnabled(true);
+    state.setBlendSource  (RenderState::BlendMode::SrcAlpha);
+    state.setBlendDest    (RenderState::BlendMode::OneMinusSrcAlpha);
+    state.setCullFaceMode (RenderState::CullMode::Front);
+
+    auto sh = GothicShader::get("light_imposter.vert.sprv");
+    auto vs = device.shader(sh.data,sh.len);
+    sh = GothicShader::get("light_imposter.frag.sprv");
+    auto fs = device.shader(sh.data,sh.len);
+    lightImposter = device.pipeline(Triangles,state,vs,fs);
   }
 
   hiZPot  = computeShader("hiz_pot.comp.sprv");

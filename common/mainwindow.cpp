@@ -32,11 +32,10 @@
 #if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
 #include "utils/memoryinfo.h"
 #endif
-#include "ui/padglyph.h"
-
 #include <algorithm>
-#include <array>
 #include <memory>
+#include <new>
+#include <system_error>
 #if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
 #include <chrono>
 #include <limits>
@@ -75,10 +74,6 @@ double memoryMiB(uint64_t bytes, bool valid) {
   }
 
 }
-#endif
-
-#if defined(__IOS__)
-bool iosStartupLoadInProgress = false;
 #endif
 
 MainWindow::MainWindow(Device& device)
@@ -180,7 +175,9 @@ MainWindow::MainWindow(Device& device)
 void MainWindow::finishStartup() {
   startupTimer.stop();
 #if defined(__IOS__)
-  iosStartupLoadInProgress = true;
+  // Let the launch UI present before the only blocking startup barrier.
+  Tempest::iOS::yieldToUIKit();
+  shaders.waitCompiler();
 #endif
   if(!Gothic::inst().defaultSave().empty()){
     Gothic::inst().load(Gothic::inst().defaultSave());
@@ -193,9 +190,6 @@ void MainWindow::finishStartup() {
   else {
     rootMenu.processMusicTheme();
     }
-#if defined(__IOS__)
-  iosStartupLoadInProgress = false;
-#endif
   }
 
 MainWindow::~MainWindow() {
@@ -377,9 +371,6 @@ void MainWindow::paintEvent(PaintEvent& event) {
 
   const float scale = Gothic::interfaceScale(this);
 #if defined(__MOBILE_PLATFORM__)
-  // Context hints are intentionally disabled: Options -> Controls contains
-  // the complete controller layout and the transient bar obscured gameplay.
-  // drawPadHints(p, scale);
   // The ring is painted by the last overlay widget (TouchInput), after menus
   // and inventory. Painting it here would put assignment mode underneath the
   // inventory widget because parent widgets are dispatched first.
@@ -528,12 +519,6 @@ void MainWindow::onSettings() {
   if(zMaxFps>0)
     maxFpsInv = 1000u/uint64_t(zMaxFps); else
     maxFpsInv = 0;
-#if defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
-  // settingsSetI() emits onSettingsChanged immediately, so rebuilding the
-  // projection here makes the stock Draw distance choice live in-game.
-  if(auto* camera = Gothic::inst().camera())
-    camera->setViewport(swapchain.w(),swapchain.h());
-#endif
   }
 
 void MainWindow::mouseWheelEvent(MouseEvent &event) {
@@ -896,7 +881,7 @@ void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp)
     const int r  = std::max(10,int(18*scale));
     const int t  = std::max(2, int(2*scale));
     const int l  = std::max(4, int(8*scale));
-    p.setBrush(Color(1.f,0.43f,0.43f,0.9f));         // (255,110,110) lock tint (spec 5.4)
+    p.setBrush(Color(1.f,0.43f,0.43f,0.9f));
     p.drawRect(cx-r,   cy-r,   l, t); p.drawRect(cx-r,   cy-r,   t, l); // top-left
     p.drawRect(cx+r-l, cy-r,   l, t); p.drawRect(cx+r-t, cy-r,   t, l); // top-right
     p.drawRect(cx-r,   cy+r-t, l, t); p.drawRect(cx-r,   cy+r-l, t, l); // bottom-left
@@ -1005,51 +990,6 @@ void MainWindow::drawBar(Painter &p, const Tempest::Texture2d* bar, int x, int y
   p.drawRect(x+int(pd),y+dy,int(float(destW-pd*2)*v),int(destHin),
              0,0,bar->w(),bar->h());
   }
-
-#if defined(__MOBILE_PLATFORM__)
-void MainWindow::drawPadHints(Painter& p, float scale) {
-  if(Application::tickCount()>=padHintUntil)   // only flashes briefly after a context change
-    return;
-  if(!Gamepad::poll().connected)               // touch users don't need button hints
-    return;
-
-  struct Hint { PadGlyph::Btn b; std::string_view t; };
-  std::array<Hint,6> hints{};
-  size_t n = 0;
-  switch(padContext()) {
-    case PadCtx::World:
-      hints = {{ {PadGlyph::A,"Action"},{PadGlyph::Y,"Weapon"},{PadGlyph::B,"Jump"},
-                 {PadGlyph::RT,"Block"},{PadGlyph::R3,"Lock"},{PadGlyph::RB,"Magic"} }};
-      n = 6; break;
-    case PadCtx::Dialog:
-      hints = {{ {PadGlyph::A,"Select"},{PadGlyph::B,"Skip"},{PadGlyph::DPadUp,"Choose"} }};
-      n = 3; break;
-    case PadCtx::Menu:
-      hints = {{ {PadGlyph::A,"OK"},{PadGlyph::B,"Back"},{PadGlyph::DPadLeft,"Change"} }};
-      n = 3; break;
-    case PadCtx::Inventory:
-      hints = {{ {PadGlyph::A,"Use"},{PadGlyph::B,"Close"},{PadGlyph::DPadUp,"Move"} }};
-      n = 3; break;
-    case PadCtx::Loading:
-      return;
-    }
-  if(n==0)
-    return;
-
-  auto&     fnt = Resources::font(scale);
-  const int s   = std::max(16,int(26*scale));
-  const int gap = std::max(2, s/6);
-
-  int total = 0;
-  for(size_t i=0;i<n;++i)
-    total += s + gap + fnt.textSize(hints[i].t).w + gap*2;
-
-  int       x = (w()-total)/2;
-  const int y = h() - s - std::max(6,int(10*scale)) - safeArea.bottom;
-  for(size_t i=0;i<n;++i)
-    x += PadGlyph::drawLabelled(p, fnt, hints[i].b, x, y, s, hints[i].t);
-  }
-#endif
 
 void MainWindow::drawMsg(Tempest::Painter& p) {
   if(barBack==nullptr)
@@ -1228,20 +1168,10 @@ void MainWindow::flushPerfWindow(uint64_t nowUs, bool force) {
   const double measuredFps = double(perfWindow.framesSubmitted)*1000000.0/double(elapsedUs);
 #if defined(OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT)
   constexpr const char* perfExperiment = "three_frames_in_flight";
-#elif defined(OPENGOTHIC_NPC_DIALOG_CULLING)
-  constexpr const char* perfExperiment = "npc_dialog_culling";
 #else
   constexpr const char* perfExperiment = "control";
 #endif
-#if defined(OPENGOTHIC_GPU_EXPERIMENT_DYNAMIC_DRAW_DISTANCE)
-  constexpr const char* gpuExperiment = "dynamic_draw_distance";
-  const uint32_t worldFarPlane = Camera::configuredFarPlane();
-  const uint32_t drawDistancePercent = worldFarPlane/1000u;
-#elif defined(OPENGOTHIC_GPU_EXPERIMENT_WORLD_FAR_PLANE_60000)
-  constexpr const char* gpuExperiment = "world_far_plane_60000";
-  constexpr uint32_t worldFarPlane = 60000u;
-  constexpr uint32_t drawDistancePercent = 60u;
-#elif defined(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
+#if defined(OPENGOTHIC_IOS_DIRECT_DRAWABLE)
   constexpr const char* gpuExperiment = "direct_drawable";
   constexpr uint32_t worldFarPlane = 100000u;
   constexpr uint32_t drawDistancePercent = 100u;
@@ -1396,10 +1326,6 @@ uint64_t MainWindow::tick() {
 #if defined(__MOBILE_PLATFORM__)
   mobileUi.tick();
   gamepad.tick(dt);
-  if(const PadCtx pc = padContext(); pc!=lastPadCtx) {
-    lastPadCtx   = pc;                       // flash the controls-help on context change
-    padHintUntil = Application::tickCount() + 4000;
-    }
   // Damage haptic: pulse when the player's HP drops.
   if(auto w = Gothic::inst().world(); w!=nullptr && w->player()!=nullptr) {
     const int hp = w->player()->attribute(ATR_HITPOINTS);
@@ -1606,9 +1532,10 @@ void MainWindow::loadGame(std::string_view slot) {
     }
 
   Gothic::inst().setBenchmarkMode(Benchmark::None);
-  Gothic::inst().startLoad("LOADING.TGA",[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
+  auto path = Gothic::userPath(slot);
+  Gothic::inst().startLoad("LOADING.TGA",[path=std::move(path)](std::unique_ptr<GameSession>&& game){
     game = nullptr; // clear world-memory now
-    Tempest::RFile file(slot);
+    Tempest::RFile file(path);
     Serialize      s(file);
     std::unique_ptr<GameSession> w(new GameSession(s));
     return w;
@@ -1639,6 +1566,7 @@ void MainWindow::saveGame(std::string_view slot, std::string_view name) {
   pendingSave.slot        = std::string(slot);
   pendingSave.name        = std::string(name);
   pendingSave.stage       = PendingSave::Stage::CaptureRequested;
+  pendingSave.deadline    = Application::tickCount()+PendingSave::TimeoutMs;
   Gothic::inst().setLoadingProgress(0);
   update();
   return;
@@ -1690,19 +1618,19 @@ void MainWindow::saveGame(std::string_view slot, std::string_view name) {
 
 #if defined(__IOS__)
 void MainWindow::startPendingSave(Pixmap&& preview) {
-  auto screen = std::make_shared<Pixmap>(std::move(preview));
   auto slot   = std::move(pendingSave.slot);
   auto name   = std::move(pendingSave.name);
+  auto path   = Gothic::userPath(slot);
+  pendingSave.reset();
 
-  pendingSave.preview     = Attachment();
-  pendingSave.frameId     = 0;
-  pendingSave.stage       = PendingSave::Stage::None;
+  // Clear the local state before allocations or serialization can throw.
+  auto screen = std::make_shared<Pixmap>(std::move(preview));
 
   Gothic::inst().startSave(Texture2d(),
-    [slot=std::move(slot),name=std::move(name),screen=std::move(screen)](std::unique_ptr<GameSession>&& game){
+    [path=std::move(path),name=std::move(name),screen=std::move(screen)](std::unique_ptr<GameSession>&& game){
       if(!game)
         return std::move(game);
-      Tempest::WFile f(slot);
+      Tempest::WFile f(path);
       Serialize      s(f);
       game->save(s,name,*screen);
       return std::move(game);
@@ -1711,22 +1639,44 @@ void MainWindow::startPendingSave(Pixmap&& preview) {
   }
 
 void MainWindow::processPendingSave() {
+  if(!pendingSave.active())
+    return;
+
+  if(pendingSave.deadline!=0 && Application::tickCount()>=pendingSave.deadline) {
+    Log::e("[save] preview timed out; using placeholder");
+    startPendingSave(Pixmap(4,4,TextureFormat::RGBA8));
+    return;
+    }
+
   if(pendingSave.stage!=PendingSave::Stage::AwaitingGpu)
     return;
-  if(!fence[pendingSave.frameId].wait(0))
-    return;
+
+  try {
+    if(!fence[pendingSave.frameId].wait(0))
+      return;
+    }
+  catch(const std::exception& e) {
+    Log::e("[save] preview fence failed; abandoning pending preview: ",e.what());
+    pendingSave.reset();
+    throw;
+    }
+  catch(...) {
+    Log::e("[save] preview fence failed; abandoning pending preview: ",
+           ExceptionDump::describe(std::current_exception()));
+    pendingSave.reset();
+    throw;
+    }
 
   try {
     auto preview = device.readPixels(textureCast<const Texture2d&>(pendingSave.preview));
     startPendingSave(std::move(preview));
     }
-  catch(const std::exception& e) {
+  catch(const std::system_error& e) {
     Log::e("[save] preview readback failed; using placeholder: ",e.what());
     startPendingSave(Pixmap(4,4,TextureFormat::RGBA8));
     }
-  catch(...) {
-    Log::e("[save] preview readback failed; using placeholder: ",
-           ExceptionDump::describe(std::current_exception()));
+  catch(const std::bad_alloc& e) {
+    Log::e("[save] preview readback failed; using placeholder: ",e.what());
     startPendingSave(Pixmap(4,4,TextureFormat::RGBA8));
     }
   }
@@ -1954,13 +1904,12 @@ void MainWindow::render(){
           startPendingSave(Pixmap(4,4,TextureFormat::RGBA8));
           }
         }
-      catch(const std::exception& e) {
+      catch(const std::system_error& e) {
         Log::e("[save] preview allocation failed; using placeholder: ",e.what());
         startPendingSave(Pixmap(4,4,TextureFormat::RGBA8));
         }
-      catch(...) {
-        Log::e("[save] preview allocation failed; using placeholder: ",
-               ExceptionDump::describe(std::current_exception()));
+      catch(const std::bad_alloc& e) {
+        Log::e("[save] preview allocation failed; using placeholder: ",e.what());
         startPendingSave(Pixmap(4,4,TextureFormat::RGBA8));
         }
       }
@@ -2032,22 +1981,6 @@ void MainWindow::render(){
     Log::e("swapchain is outdated - reset renderer");
     device.waitIdle();
     swapchain.reset();
-    }
-  catch(const std::exception& e) {
-    // A stray exception in the frame loop (e.g. during save/load finalize)
-    // must not abort the whole app via std::terminate. Log the cause and try
-    // to recover the device instead of crashing to the home screen.
-    Log::e("unhandled exception in render loop: ", e.what());
-    try { device.waitIdle(); } catch(...) {}
-    }
-  catch(...) {
-    // Objective-C / Metal exceptions are NOT std::exception; on the Apple ABI
-    // they still unwind through C++ and terminate the app if unhandled. Catch
-    // them here too (e.g. a Metal validation NSException on the saving screen)
-    // and log their identity, so the device log names the throw site.
-    Log::e("unhandled non-std/ObjC exception in render loop: ",
-           ExceptionDump::describe(std::current_exception()));
-    try { device.waitIdle(); } catch(...) {}
     }
   }
 

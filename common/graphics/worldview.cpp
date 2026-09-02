@@ -36,10 +36,9 @@ bool WorldView::isInPfxRange(const Vec3& pos) const {
   return pfxGroup.isInPfxRange(pos);
   }
 
-void WorldView::preFrameUpdate(const Camera& camera, uint64_t tickCount, uint8_t fId,
-                               const Tempest::Matrix4x4* projectionOverride) {
+void WorldView::preFrameUpdate(const Camera& camera, uint64_t tickCount, uint8_t fId) {
   const auto ldir = gSky.sunLight().dir();
-  const auto& projection = projectionOverride!=nullptr ? *projectionOverride : camera.projective();
+  const auto& projection = camera.projective();
   Tempest::Matrix4x4 shadow   [Resources::ShadowLayers];
   Tempest::Matrix4x4 shadowLwc[Resources::ShadowLayers];
   for(size_t i=0; i<Resources::ShadowLayers; ++i) {

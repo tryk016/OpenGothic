@@ -113,6 +113,13 @@ function(add_frag_shader OUTPUT)
   set(OPENGOTHIC_SHADERS_SPRV ${OPENGOTHIC_SHADERS_SPRV} PARENT_SCOPE)
 endfunction(add_frag_shader)
 
+# editor hud
+add_shader(gizmo.vert hud/gizmo.vert)
+add_shader(gizmo.frag hud/gizmo.frag)
+
+add_shader(light_imposter.vert hud/light_imposter.vert)
+add_shader(light_imposter.frag hud/light_imposter.frag)
+
 # cluster culling
 add_shader(cluster_init.comp            materials/cluster_init.comp)
 add_shader(cluster_patch.comp           materials/cluster_patch.comp)
@@ -230,7 +237,6 @@ add_shader(sky_exposure.comp         lighting/sky_exposure.comp)
 
 add_shader(tonemapping.frag          lighting/tonemapping.frag)
 add_shader(tonemapping_up.frag       lighting/tonemapping.frag -DUPSCALE)
-add_shader(metalfx_motion.frag       lighting/metalfx_motion.frag)
 
 add_shader(water_reflection.mesh     water/water_reflection.mesh)
 add_shader(water_reflection.frag     water/water_reflection.frag)

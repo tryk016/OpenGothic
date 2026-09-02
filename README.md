@@ -20,7 +20,7 @@ and a mobile performance profile.
 ## Install on iPhone or iPad
 
 The maintained build uses MetalFX Spatial with an automatic Lanczos fallback.
-MetalFX Temporal is not enabled in the public application.
+MetalFX Temporal is not part of the maintained public application.
 
 1. Set up [SideStore](https://sidestore.io) or another compatible sideloading
    client.
@@ -38,7 +38,7 @@ The IPA is unsigned and must be signed by the sideloading client. Normal
 updates preserve the app's `Documents` directory, settings and saves. Do not
 uninstall an existing copy before backing up that directory.
 
-- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.2-spatial)
+- [Download release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.3-spatial)
 - [Complete installation and local-build guide](docs/ios/INSTALL.md)
 
 ## Requirements

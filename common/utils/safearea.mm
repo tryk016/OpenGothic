@@ -9,17 +9,24 @@
 SafeArea::Insets SafeArea::insets() {
   // The game and UIKit share one thread (Tempest's fiber model), so reading
   // UIKit properties directly here is safe.
-  UIWindow* win = nil;
-  for(UIScene* sc in UIApplication.sharedApplication.connectedScenes) {
-    if(![sc isKindOfClass:UIWindowScene.class])
-      continue;
-    for(UIWindow* w in ((UIWindowScene*)sc).windows) {
-      if(win==nil)
-        win = w;
-      if(w.isKeyWindow) {
-        win = w;
-        break;
+  static UIWindow* win = nil;
+  if(win==nil || !win.isKeyWindow) {
+    UIWindow* next = nil;
+    for(UIScene* sc in UIApplication.sharedApplication.connectedScenes) {
+      if(![sc isKindOfClass:UIWindowScene.class])
+        continue;
+      for(UIWindow* w in ((UIWindowScene*)sc).windows) {
+        if(next==nil)
+          next = w;
+        if(w.isKeyWindow) {
+          next = w;
+          break;
+          }
         }
+      }
+    if(next!=win) {
+      [win release];
+      win = [next retain];
       }
     }
   if(win==nil)

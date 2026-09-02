@@ -435,34 +435,13 @@ void WorldObjects::updateAnimation(uint64_t dt) {
     return;
 #if defined(OPENGOTHIC_NPC_ANIMATION_CULLING)
   const bool inDialog = owner.isInDialog();
-  bool       forceAll = inDialog || owner.currentCs()!=nullptr;
-  Npc*       dialogNpcA = nullptr;
-  Npc*       dialogNpcB = nullptr;
-#if defined(OPENGOTHIC_NPC_DIALOG_CULLING)
-  // A dialog or cutscene changes the camera, not the relevance of every NPC in
-  // the world. Keep the two dialog actors explicit; visible cutscene actors are
-  // refreshed from the active camera frustum immediately before drawing.
-  forceAll = false;
-  if(inDialog) {
-    for(const auto& i:npcArr) {
-      if(!Gothic::inst().isNpcInDialog(*i))
-        continue;
-      if(dialogNpcA==nullptr)
-        dialogNpcA = i.get();
-      else {
-        dialogNpcB = i.get();
-        break;
-        }
-      }
-    }
-#endif
+  const bool forceAll = inDialog || owner.currentCs()!=nullptr;
   Npc* const player = owner.player();
-  Workers::parallelTasks(npcArr,[dt,forceAll,player,dialogNpcA,dialogNpcB](std::unique_ptr<Npc>& i){
-    const bool dialogRelevant = i.get()==dialogNpcA || i.get()==dialogNpcB;
+  Workers::parallelTasks(npcArr,[dt,forceAll,player](std::unique_ptr<Npc>& i){
     const bool playerRelevant = player!=nullptr && (i->target()==player || player->target()==i.get());
     const bool full = forceAll || i->isPlayer() ||
                       i->processPolicy()==NpcProcessPolicy::AiNormal ||
-                      dialogRelevant || playerRelevant;
+                      playerRelevant;
     if(full)
       i->updateAnimation(dt);
     else

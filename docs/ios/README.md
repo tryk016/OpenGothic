@@ -120,8 +120,8 @@ are optional and do not change the renderer used on other platforms:
   compilation as the authoritative fallback;
 - MetalFX Spatial upscaling with a Lanczos fallback.
 
-The maintained public build enables Spatial and leaves the experimental
-Temporal path disabled.
+The maintained public build enables Spatial. Temporal upscaling is not part of
+the maintained port.
 
 MetalFX support is opportunistic. If a requested scaler is unavailable or
 rejects the active texture configuration, rendering falls back without making
@@ -174,7 +174,8 @@ APIs. Its principal integration areas are:
 - UIKit scene activation, backgrounding and display-link scheduling;
 - controller snapshots, touch input, safe-area layout and haptics;
 - iOS audio-session setup;
-- working-directory-first access to user data with application-bundle fallback;
+- explicit container paths for writable settings and saves, with packaged
+  resources resolved relative to the application bundle;
 - Metal swapchain, upscaler and startup-library options exposed through Tempest;
 - fence-safe save-preview capture and recovery when a preview cannot be made.
 

@@ -27,7 +27,7 @@ For SideStore (recommended):
 
 AltStore and other clients compatible with AltStore sources can use the same
 `apps.json`. The IPA can also be downloaded directly from the
-[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.2-spatial)
+[MetalFX Spatial release](https://github.com/tryk016/OpenGothic/releases/tag/ios-v1.3.3-spatial)
 and selected manually in the sideloading client. Free Apple-account signatures
 normally need periodic refresh; follow the selected client's current setup and
 refresh instructions.
@@ -130,9 +130,7 @@ Individual options can be selected explicitly when testing:
 | `OPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT` | Use three frame-resource and Metal swapchain slots |
 | `OPENGOTHIC_IOS_DIRECT_DRAWABLE` | Prefer direct drawable rendering with copy fallback |
 | `OPENGOTHIC_NPC_ANIMATION_CULLING` | Skip full skeletal-pose work for distant, off-screen NPCs while preserving animation events |
-| `OPENGOTHIC_NPC_DIALOG_CULLING` | Experimental aggressive dialog/cutscene mode; not enabled in the recommended profile |
 | `OPENGOTHIC_METALFX_SPATIAL` | Enable MetalFX Spatial where available |
-| `OPENGOTHIC_METALFX_TEMPORAL` | Experimental Temporal path; disabled in the maintained public build |
 | `OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS` | Bundle the verified startup shader set; enabled by default |
 
 For example:
@@ -146,13 +144,19 @@ cmake -S . -B build-ios-performance -G Xcode \
   -DOPENGOTHIC_IOS_THREE_FRAMES_IN_FLIGHT=ON \
   -DOPENGOTHIC_IOS_DIRECT_DRAWABLE=ON \
   -DOPENGOTHIC_NPC_ANIMATION_CULLING=ON \
-  -DOPENGOTHIC_METALFX_SPATIAL=ON \
-  -DOPENGOTHIC_METALFX_TEMPORAL=OFF
+  -DOPENGOTHIC_METALFX_SPATIAL=ON
 ```
 
 Unsupported MetalFX paths fall back at runtime. To verify the authoritative
 runtime shader-compile path, configure with
 `-DOPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS=OFF`.
+
+Before publishing an IPA, verify that its bundle metadata, file size and
+download URL agree with the SideStore manifest:
+
+```sh
+python3 ios/validate-package.py OpenGothic-iOS.ipa --manifest apps.json
+```
 
 ## Copy the game data
 
@@ -182,9 +186,10 @@ Copy the files using one of the platform file-sharing paths available to you:
 - the Files app on iOS or iPadOS, for example from iCloud Drive or external
   storage.
 
-OpenGothic checks the working directory for `Data`, `_work/Data` and compiled
-scripts. If required data is not found, the application presents an error
-instead of starting a world. Correct the directory layout and launch it again.
+On iOS, OpenGothic validates `Data`, `_work/Data` and the compiled scripts under
+the application's `Documents` directory. If required data is not found, the
+application presents an error instead of starting a world. Correct the
+directory layout and launch it again.
 
 ## Configuration and saves
 

@@ -10,9 +10,6 @@
 #if defined(OPENGOTHIC_METALFX_SPATIAL)
 #include <Tempest/SpatialScaler>
 #endif
-#if defined(OPENGOTHIC_METALFX_TEMPORAL)
-#include <Tempest/TemporalScaler>
-#endif
 
 #include "worldview.h"
 #include "shaders.h"
@@ -28,6 +25,8 @@ class Renderer final {
 
     void onWorldChanged();
     bool ssaoBuffersAllocated() const;
+    void setGizmo(bool enable, Tempest::Vec3 center);
+    void setLightsHud(const Tempest::Texture2d* tex);
 
     void draw(Tempest::Attachment& result, Tempest::Encoder<Tempest::CommandBuffer>& cmd, uint8_t fId,
               Tempest::VectorImage::Mesh& uiLayer, Tempest::VectorImage::Mesh& numOverlay,
@@ -109,17 +108,13 @@ class Renderer final {
     void drawFog          (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
     void drawSunMoon      (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
     void drawSunMoon      (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview, bool isSun);
+    void drawGizmo        (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
+    void drawLightsHud    (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
 
     void drawSwRT         (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
     void drawPathtrace    (Tempest::Encoder<Tempest::CommandBuffer>& cmd, WorldView& wview, uint8_t fId);
 
     void stashSceneAux    (Tempest::Encoder<Tempest::CommandBuffer>& cmd);
-
-#if defined(OPENGOTHIC_METALFX_TEMPORAL)
-    bool temporalUpscalingActive() const;
-    void prepareTemporalMotion(Tempest::Encoder<Tempest::CommandBuffer>& cmd);
-    void resetTemporalHistory();
-#endif
 
     void drawRayQueryDbg  (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
     void drawProbesDbg    (Tempest::Encoder<Tempest::CommandBuffer>& cmd, const WorldView& wview);
@@ -180,24 +175,6 @@ class Renderer final {
     Tempest::StorageImage     metalFxOutput;
     Tempest::SpatialScaler    metalFxScaler;
     bool                      metalFxEncodeFailed = false;
-#endif
-#if defined(OPENGOTHIC_METALFX_TEMPORAL)
-    Tempest::Attachment       metalFxMotion;
-    Tempest::TemporalScaler   metalFxTemporalScaler;
-    Tempest::Matrix4x4        metalFxCurrentViewProj;
-    Tempest::Matrix4x4        metalFxPreviousViewProj;
-    Tempest::Vec3             metalFxCurrentCameraPos = {};
-    Tempest::Vec3             metalFxPreviousCameraPos = {};
-    Tempest::Vec3             metalFxCurrentCameraDir = {};
-    Tempest::Vec3             metalFxPreviousCameraDir = {};
-    uint64_t                  metalFxLastFrameTime = 0;
-    uint32_t                  metalFxJitterIndex = 0;
-    float                     metalFxJitterX = 0.f;
-    float                     metalFxJitterY = 0.f;
-    bool                      metalFxHistoryValid = false;
-    bool                      metalFxResetThisFrame = true;
-    bool                      metalFxTemporalEncodeFailed = false;
-    bool                      metalFxTemporalEncodeConfirmed = false;
 #endif
     Tempest::ZBuffer          zbuffer, shadowMap[Resources::ShadowLayers];
     Tempest::ZBuffer          zbufferUi;
@@ -335,6 +312,15 @@ class Renderer final {
     struct {
       Tempest::StorageImage     outputImage;
       } swrt;
+
+    struct {
+      Tempest::Vec3 center = {};
+      bool          enable = false;
+      } gizmo;
+
+    struct {
+      const Tempest::Texture2d* light = nullptr;
+      } hud;
 
     Tempest::TextureFormat    shadowFormat  = Tempest::TextureFormat::Depth16;
     Tempest::TextureFormat    zBufferFormat = Tempest::TextureFormat::Depth16;

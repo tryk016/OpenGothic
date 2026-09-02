@@ -110,12 +110,14 @@ Gothic::Gothic() {
   wrldDef = CommandLine::inst().wrldDef;
 
   baseIniFile.reset(new IniFile(nestedPath({u"system",u"Gothic.ini"},Dir::FT_File)));
+  const auto userIniPath = userPath("Gothic.ini");
 #if defined(__IOS__)
-  const bool hasUserIni = FileUtil::exists(std::u16string(u"Gothic.ini"));
+  const bool hasUserIni = FileUtil::exists(userIniPath);
 #endif
-  iniFile.reset(new IniFile(u"Gothic.ini"));
+  iniFile.reset(new IniFile(userIniPath));
 #if defined(__IOS__)
   constexpr int iosProfileVersion = 4;
+  const int     oldIosProfileVersion = iniFile->getI("INTERNAL","iosProfileVersion",0);
   bool          iosProfileChanged = false;
   if(!hasUserIni) {
     // Keep the copied PC system/Gothic.ini untouched. This small writable
@@ -135,11 +137,11 @@ Gothic::Gothic() {
     iniFile->set("GAMEPAD",  "invertY",           0);
     iosProfileChanged = true;
     }
-  else if(iniFile->getI("INTERNAL","iosProfileVersion",0)<iosProfileVersion) {
+  else if(oldIosProfileVersion<iosProfileVersion) {
     // Version 3 was only used by the unreleased 1.3.0 development build and
     // generated 1024 px shadow maps. Move that generated profile back to the
     // lower-cost mobile default; all other explicit values remain untouched.
-    if(iniFile->getI("INTERNAL","iosProfileVersion",0)==3 &&
+    if(oldIosProfileVersion==3 &&
        iniFile->getI("ENGINE","shadowResolution",-1)==1024)
       iniFile->set("ENGINE", "shadowResolution", 512);
     iosProfileChanged = true;
@@ -155,6 +157,8 @@ Gothic::Gothic() {
   if(iosProfileChanged) {
     iniFile->set("INTERNAL", "iosProfileVersion", iosProfileVersion);
     iniFile->flush();
+    if(hasUserIni)
+      Log::i("Migrated iOS profile ",oldIosProfileVersion," -> ",iosProfileVersion);
     }
 #else
   if(!iniFile->has("INTERNAL", "vidResIndex"))
@@ -1025,6 +1029,14 @@ std::unique_ptr<DocumentMenu::Show>& Gothic::getDocument(int id) {
 
 std::u16string Gothic::nestedPath(const std::initializer_list<const char16_t*> &name, Tempest::Dir::FileType type) {
   return CommandLine::inst().nestedPath(name,type);
+  }
+
+std::u16string Gothic::userPath(std::string_view name) {
+  auto path = TextCodec::toUtf16(name);
+#if defined(__IOS__)
+  path.insert(0,CommandLine::inst().rootPath());
+#endif
+  return path;
   }
 
 void Gothic::setupVmCommonApi(zenkit::DaedalusVm& vm) {

@@ -18,7 +18,6 @@ struct DeviceSettingsText {
   const char* title;
   const char* frameRate;
   const char* off;
-  const char* controlled;
   const char* back;
   };
 

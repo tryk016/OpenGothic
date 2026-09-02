@@ -32,6 +32,7 @@
 #endif
 
 static char gpuName[64]="?";
+static volatile std::sig_atomic_t handlingSignal = 0;
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -45,6 +46,7 @@ static LONG WINAPI exceptionHandler(PEXCEPTION_POINTERS) {
 
 static void signalHandler(int sig) {
   std::signal(sig, SIG_DFL);
+  handlingSignal = 1;
   const char* sname = nullptr;
   char buf[16]={};
   if(sig==SIGSEGV)
@@ -187,7 +189,8 @@ void CrashLog::dumpStack(const char *sig, const char *extGpuLog) {
   std::cout << std::endl << "---crashlog(" <<  sig   << ")---" << std::endl;
   writeSysInfo(std::cout);
 #if defined(__APPLE__)
-  dumpCrashInfo(std::cout);
+  if(!handlingSignal)
+    dumpCrashInfo(std::cout);
 #endif
   tracebackGpu(std::cout, extGpuLog);
 #if defined(__cpp_lib_stacktrace)
@@ -205,9 +208,10 @@ void CrashLog::dumpStack(const char *sig, const char *extGpuLog) {
   fout << "---crashlog(" <<  sig << ")---" << std::endl;
   writeSysInfo(fout);
 #if defined(__APPLE__)
-  dumpCrashInfo(fout);
+  if(!handlingSignal)
+    dumpCrashInfo(fout);
 #endif
-  tracebackGpu(std::cout, extGpuLog);
+  tracebackGpu(fout, extGpuLog);
 #if defined(__cpp_lib_stacktrace)
   tracebackStd(fout);
 #elif defined(__WINDOWS__)

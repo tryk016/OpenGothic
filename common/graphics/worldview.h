@@ -32,8 +32,7 @@ class WorldView {
 
     bool isInPfxRange(const Tempest::Vec3& pos) const;
 
-    void preFrameUpdate(const Camera& camera, uint64_t tickCount, uint8_t fId,
-                        const Tempest::Matrix4x4* projectionOverride = nullptr);
+    void preFrameUpdate(const Camera& camera, uint64_t tickCount, uint8_t fId);
     void postFrameupdate();
 
     void prepareGlobals(Tempest::Encoder<Tempest::CommandBuffer> &cmd, uint8_t fId);

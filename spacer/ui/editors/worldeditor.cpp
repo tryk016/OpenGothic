@@ -28,6 +28,9 @@ WorldEditor::WorldEditor() {
     Tempest::Log::e("unable to load landscape mesh");
     }
 
+  timer.timeout.bind(this, &WorldEditor::tick);
+  timer.start(16);
+  renderer.setLightsHud(&Assets::inst().im.pointLight);
   EditorWindow::onUpdate3D.bind(this, &WorldEditor::update3d);
   }
 
@@ -145,7 +148,6 @@ void WorldEditor::update3d(Tempest::Encoder<Tempest::CommandBuffer>& cmd, uint8_
   if(!hasFocus() && !needToUpdate())
     return;
 
-  tickCamera(16); //TODO
   renderer.draw(sceneImage, cmd, cmdId, level->view(), camera);
   }
 
@@ -169,6 +171,10 @@ void WorldEditor::tickCamera(uint64_t dt) {
   camera.tick(dt);
   }
 
+void WorldEditor::tick() {
+  tickCamera(16);
+  }
+
 WorldEdit::Vob* WorldEditor::rayQuery(Tempest::Point mpos) {
   auto vp = camera.viewProj();
   vp.inverse();
@@ -189,6 +195,10 @@ WorldEdit::Vob* WorldEditor::rayQuery(Tempest::Point mpos) {
   }
 
 void WorldEditor::selectVob(const WorldEdit::Vob& vob) {
+  if(vob.get()==nullptr)
+    return;
+  const auto pos = vob.get()->position;
+  renderer.setGizmo(true, Vec3(pos.x,pos.y,pos.z));
   treeDelegate->setVob(&vob);
   propertyDelegate->setVob(&vob);
   update();
