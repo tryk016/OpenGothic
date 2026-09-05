@@ -45,8 +45,10 @@ class Serialize {
       };
     Serialize(Tempest::ODevice& fout);
     Serialize(Tempest::IDevice&  fin);
-    Serialize(Serialize&&)=default;
+    Serialize(Serialize&&)=delete;
     ~Serialize();
+
+    void finalize();
 
     uint16_t version()              const { return wldVer; }
     void     setVersion(uint16_t v)       { wldVer = v;    }
@@ -298,4 +300,3 @@ class Serialize {
     Tempest::ODevice*        fout      = nullptr;
     Tempest::IDevice*        fin       = nullptr;
   };
-
