@@ -3,6 +3,8 @@
 #include <Tempest/Platform>
 #include <Tempest/TextCodec>
 
+#include <cstdio>
+
 #ifdef __WINDOWS__
 #include <windows.h>
 #include <shlwapi.h>
@@ -19,6 +21,30 @@ bool FileUtil::exists(const std::u16string &path) {
   std::string p=Tempest::TextCodec::toUtf8(path);
   struct stat  buffer={};
   return stat(p.c_str(),&buffer)==0;
+#endif
+  }
+
+bool FileUtil::replaceFile(std::u16string_view source, std::u16string_view destination) {
+#ifdef __WINDOWS__
+  const auto src = std::u16string(source);
+  const auto dst = std::u16string(destination);
+  return MoveFileExW(reinterpret_cast<const WCHAR*>(src.c_str()),
+                     reinterpret_cast<const WCHAR*>(dst.c_str()),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)!=0;
+#else
+  const auto src = TextCodec::toUtf8(source);
+  const auto dst = TextCodec::toUtf8(destination);
+  return std::rename(src.c_str(),dst.c_str())==0;
+#endif
+  }
+
+void FileUtil::removeFile(std::u16string_view path) {
+#ifdef __WINDOWS__
+  const auto value = std::u16string(path);
+  DeleteFileW(reinterpret_cast<const WCHAR*>(value.c_str()));
+#else
+  const auto value = TextCodec::toUtf8(path);
+  std::remove(value.c_str());
 #endif
   }
 

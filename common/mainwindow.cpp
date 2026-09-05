@@ -18,6 +18,7 @@
 #include "ui/videowidget.h"
 
 #include "utils/mouseutil.h"
+#include "utils/fileutil.h"
 #include "utils/string_frm.h"
 #include "world/triggers/abstracttrigger.h"
 #include "world/objects/npc.h"
@@ -35,6 +36,7 @@
 #include <algorithm>
 #include <memory>
 #include <new>
+#include <stdexcept>
 #include <system_error>
 #if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
 #include <chrono>
@@ -45,6 +47,29 @@
 #include "gothic.h"
 
 using namespace Tempest;
+
+namespace {
+
+void writeSaveGame(const std::u16string& path, GameSession& game,
+                   std::string_view name, const Pixmap& screen) {
+  const auto temporary = path+u".tmp";
+  try {
+    {
+      WFile    file(temporary);
+      Serialize output(file);
+      game.save(output,name,screen);
+      output.finalize();
+    }
+    if(!FileUtil::replaceFile(temporary,path))
+      throw std::runtime_error("unable to replace savegame file");
+    }
+  catch(...) {
+    FileUtil::removeFile(temporary);
+    throw;
+    }
+  }
+
+}
 
 #if defined(OPENGOTHIC_PERF_DIAGNOSTICS)
 namespace {
@@ -1600,13 +1625,12 @@ void MainWindow::saveGame(std::string_view slot, std::string_view name) {
   auto& thumb = lres.isEmpty() ? tex : lres;
   auto  pm    = device.readPixels(textureCast<const Texture2d&>(thumb));
 
-  Gothic::inst().startSave(std::move(textureCast<Texture2d&>(tex)),[slot=std::string(slot),name=std::string(name),pm](std::unique_ptr<GameSession>&& game){
+  Gothic::inst().startSave(std::move(textureCast<Texture2d&>(tex)),
+    [path=Gothic::userPath(slot),name=std::string(name),pm](std::unique_ptr<GameSession>&& game){
     if(!game)
       return std::move(game);
 
-    Tempest::WFile f(slot);
-    Serialize      s(f);
-    game->save(s,name,pm);
+    writeSaveGame(path,*game,name,pm);
 
     // no print yet, because threading
     // gothic.print("Game saved");
@@ -1630,9 +1654,7 @@ void MainWindow::startPendingSave(Pixmap&& preview) {
     [path=std::move(path),name=std::move(name),screen=std::move(screen)](std::unique_ptr<GameSession>&& game){
       if(!game)
         return std::move(game);
-      Tempest::WFile f(path);
-      Serialize      s(f);
-      game->save(s,name,*screen);
+      writeSaveGame(path,*game,name,*screen);
       return std::move(game);
       });
   update();
