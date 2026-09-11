@@ -867,7 +867,11 @@ void Renderer::drawTonemappingPass(Attachment& result, Encoder<CommandBuffer>& c
   auto& pso = upscale ? shaders.tonemappingUpscale : shaders.tonemapping;
   cmd.setFramebuffer({ {result, Tempest::Discard, Tempest::Preserve} });
   cmd.setBinding(0, wview.sceneGlobals().uboGlobal[SceneGlobals::V_Main]);
-  cmd.setBinding(1, input, Sampler::nearest(ClampMode::ClampToEdge)); // Lanczos upscale requires nearest sampling
+  // This Lanczos implementation pairs adjacent weights using bilinear sampling.
+  // Keep nearest sampling at native resolution.
+  const auto sampler = upscale ? Sampler::bilinear(ClampMode::ClampToEdge) :
+                                 Sampler::nearest(ClampMode::ClampToEdge);
+  cmd.setBinding(1, input, sampler);
   cmd.setPushData(p);
   cmd.setPipeline(pso);
   cmd.draw(nullptr, 0, 3);
