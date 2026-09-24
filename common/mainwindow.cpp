@@ -105,8 +105,9 @@ MainWindow::MainWindow(Device& device)
     setWindowTitle("Gothic II"); else
     setWindowTitle("Gothic");
 
-  if(!CommandLine::inst().isWindowMode())
+  if(!CommandLine::inst().isWindowMode()) {
     setFullscreen(true);
+    }
 
   //renderer.resetSwapchain();
   setupUi();
@@ -418,10 +419,10 @@ void MainWindow::resizeEvent(SizeEvent&) {
   if(auto camera = Gothic::inst().camera())
     camera->setViewport(swapchain.w(),swapchain.h());
 
-  const bool fs = SystemApi::isFullscreen(hwnd());
-  auto rect = SystemApi::windowClientRect(hwnd());
-  setCursorPosition(rect.w/2,rect.h/2);
-  setCursorShape(fs ? CursorShape::Hidden : CursorShape::Arrow);
+  if(SystemApi::isFullscreen(hwnd())) {
+    setCursorPosition(Point(w()/2,h()/2));
+    }
+
   dMouse = Point();
   }
 
@@ -839,8 +840,9 @@ void MainWindow::focusEvent(FocusEvent &event) {
   if(!event.in)
     return;
   dMouse = Point();
-  auto center = Point(w()/2,h()/2);
-  setCursorPosition(center);
+
+  if(SystemApi::isFullscreen(hwnd()))
+    setCursorPosition(Point(w()/2,h()/2));
   }
 
 void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp) {
@@ -1796,6 +1798,7 @@ void MainWindow::clearInput() {
 
 void MainWindow::setFullscreen(bool fs) {
   SystemApi::setAsFullscreen(hwnd(),fs);
+  setCursorShape(fs ? CursorShape::Hidden : CursorShape::Arrow);
   }
 
 void MainWindow::render(){
