@@ -1,0 +1,140 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		A10000000000000000000001 = {isa = PBXBuildFile; fileRef = A10000000000000000000002; };
+		A10000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererIOSUITests.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RendererIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000004 = {
+			isa = PBXGroup;
+			children = (A10000000000000000000005, A10000000000000000000006);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000005 = {
+			isa = PBXGroup;
+			children = (A10000000000000000000002, A10000000000000000000011);
+			path = RendererIOSUITests;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000006 = {
+			isa = PBXGroup;
+			children = (A10000000000000000000003);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000007 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A10000000000000000000001);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000008 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000009 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000000A;
+			buildPhases = (A10000000000000000000007, A10000000000000000000008);
+			buildRules = ();
+			dependencies = ();
+			name = RendererIOSUITests;
+			productName = RendererIOSUITests;
+			productReference = A10000000000000000000003;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		A1000000000000000000000B = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					A10000000000000000000009 = {CreatedOnToolsVersion = 26.4; ProvisioningStyle = Automatic; };
+				};
+			};
+			buildConfigurationList = A1000000000000000000000C;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = A10000000000000000000004;
+			productRefGroup = A10000000000000000000006;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A10000000000000000000009);
+		};
+		A1000000000000000000000D = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A1000000000000000000000E = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A1000000000000000000000F = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RendererIOSUITests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+				PRODUCT_BUNDLE_IDENTIFIER = "opengothic.rendererios.ui-tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = "";
+			};
+			name = Debug;
+		};
+		A10000000000000000000010 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RendererIOSUITests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+				PRODUCT_BUNDLE_IDENTIFIER = "opengothic.rendererios.ui-tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = "";
+			};
+			name = Release;
+		};
+		A1000000000000000000000A = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A1000000000000000000000F, A10000000000000000000010);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A1000000000000000000000C = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A1000000000000000000000D, A1000000000000000000000E);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+	};
+	rootObject = A1000000000000000000000B;
+}

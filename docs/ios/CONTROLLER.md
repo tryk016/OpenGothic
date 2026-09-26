@@ -61,6 +61,12 @@ candidate is not a public release; phone feel, simultaneous real fingers and rea
 controller hardware still require device validation. It adapts the directional
 idea without copying zGamePad/Union hooks or source.
 
+Simulator checks on 2026-09-26 covered saves 1/4 at 30 and 60 FPS limits,
+camera hold/release and background/resume (five final scenarios passed).
+iOS device, Simulator and macOS builds passed. The separate classic-profile
+smoke check also passed. See `tests/README.md` for the harness and its limits;
+these results do not replace physical multitouch, controller or gameplay testing.
+
 ## Final mapping
 
 | Control | World action |
