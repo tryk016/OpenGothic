@@ -145,7 +145,7 @@ TouchInput::WorldLayout TouchInput::worldLayout() const {
     { cb.left+m+s+2*g,       row, s, G::LB, K::Lb, A::PadAttackLeft   },
     // Stick clicks.
     { cb.left+m, cb.top+ch/2-s/2, s, G::L3, K::Key,  A::Sneak         },
-    { faceCx-step-s/2, faceCy+step-s/2, s, G::R3, K::Lock, A::ActionGeneric },
+    { faceCx-step-s/2-2*g, faceCy+step-s/2+g, s, G::R3, K::Lock, A::ActionGeneric },
     // D-pad and ring/focus actions.
     { dcx,      dcy-step, s, G::DPadUp,    K::ItemRing,      A::Idle },
     { dcx,      dcy+step, s, G::DPadDown,  K::WeaponsRing,   A::Idle },

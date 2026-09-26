@@ -83,7 +83,7 @@ final class VectorControlsUITests: XCTestCase {
     wait(3)
     screenshot("slot\(slot)-06-camera-settled",app)
 
-    point(app,0.807,0.575).tap() // R3: directly below X, left of A
+    point(app,0.795,0.585).tap() // R3: lower-left of X, slightly below A
     screenshot("slot\(slot)-06-r3",app)
     point(app,0.807,0.47).tap() // iPhone 16 Pro Max: X
     wait(2)
