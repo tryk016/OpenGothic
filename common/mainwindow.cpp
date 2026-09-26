@@ -1439,7 +1439,9 @@ void MainWindow::tickCamera(uint64_t dt) {
       }
     else if(pl!=nullptr && !camera.isFree()) {
       auto spin = camera.spin();
-      if(pl->interactive()==nullptr && !pl->isDown())
+      if(player.directionalMovement())
+        spin.y = pl->rotation() + std::remainder(spin.y-pl->rotation(),360.f);
+      else if(pl->interactive()==nullptr && !pl->isDown())
         spin.y = pl->rotation();
       if(pl->isDive() && !camera.isMarvin())
         spin.x = -pl->rotationY();
@@ -1450,8 +1452,13 @@ void MainWindow::tickCamera(uint64_t dt) {
 
   if(dt==0)
     return;
-  if(camera.isToggleEnabled() && !camera.isCutscene())
+  if(camera.isToggleEnabled() && !camera.isCutscene()) {
+    const bool independentYaw = player.directionalMovement();
+    const float yaw = camera.spin().y;
     camera.setMode(solveCameraMode());
+    if(independentYaw && player.directionalMovement())
+      camera.setSpin(PointF(camera.spin().x,yaw));
+    }
   camera.tick(dt);
   }
 

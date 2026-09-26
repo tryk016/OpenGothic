@@ -39,9 +39,50 @@ static PadGlyph::Btn glyphOfKey(Tempest::Event::KeyType k) {
 
 TouchInput::TouchInput(MainWindow& owner, PlayerControl& ctrl)
   : owner(owner), ctrl(ctrl) {
+  loadConfig();
+  Gothic::inst().onSettingsChanged.bind(this,&TouchInput::loadConfig);
+  }
+
+TouchInput::~TouchInput() {
+  Gothic::inst().onSettingsChanged.ubind(this,&TouchInput::loadConfig);
+  }
+
+void TouchInput::loadConfig() {
+  releaseWorldTouches();
+  auto& g = Gothic::inst();
+  auto f = [](const char* name, float fallback) {
+    const float value = Gothic::settingsGetF("GAMEPAD",name);
+    return value>0.f ? value : fallback;
+    };
+  analogTouch = g.settingsGetI("GAMEPAD","directionalMovement")!=0;
+  analogDeadZone = std::clamp(f("analogDeadZone",0.10f),0.01f,0.50f);
+  analogEngageZone = std::clamp(f("analogEngageZone",0.18f),analogDeadZone+0.01f,0.75f);
+  lookSensitivity = std::clamp(f("lookSensitivity",0.20f),0.01f,1.f);
+  invertY = g.settingsGetI("GAMEPAD","invertY")!=0;
+  observedInputGen = ctrl.inputGeneration();
+  }
+
+void TouchInput::updatePadAxes() {
+  if(!analogTouch || discreteStick)
+    return;
+  const auto move = gamepadMovementStick(moveStick.x,moveStick.y,analogDeadZone,
+                                         analogEngageZone,moveActive);
+  const auto look = gamepadRadialDeadZone(lookStick.x,lookStick.y,analogDeadZone);
+  PadAxes axes;
+  axes.move = move.y;
+  axes.turn = move.x;
+  axes.lookYawRate = -look.x*lookSensitivity*0.85f;
+  axes.lookPitchRate = look.y*lookSensitivity*0.425f*(invertY ? -1.f : 1.f);
+  ctrl.setPadAxes(axes);
   }
 
 namespace {
+GamepadStick touchStick(const Point& delta, int diameter) {
+  const float radius = float(std::max(1,diameter))*0.5f;
+  const float scale = std::max(radius,std::hypot(float(delta.x),float(delta.y)));
+  return {float(delta.x)/scale,float(-delta.y)/scale};
+  }
+
 struct TouchBounds {
   int left=0, top=0, right=0, bottom=0;
   };
@@ -277,6 +318,10 @@ void TouchInput::releaseWorldTouches() {
   if(mv[2]) ctrl.onKeyReleased(A::RotateL, M::Primary);
   if(mv[3]) ctrl.onKeyReleased(A::RotateR, M::Primary);
   mv[0]=mv[1]=mv[2]=mv[3]=false;
+  if(analogTouch)
+    ctrl.setPadAxes({});
+  moveStick = lookStick = {};
+  moveActive = false;
   moveId = -1;
   lookId = -1;
   ringId = -1;
@@ -310,10 +355,19 @@ bool TouchInput::dispatchSystemEffect(PadSystemGesture::Effect effect) {
   }
 
 void TouchInput::tick() {
+  const uint64_t inputGen = ctrl.inputGeneration();
+  auto pl = Gothic::inst().player();
+  const bool discrete = pl!=nullptr && pl->interactive()!=nullptr;
+  if(inputGen!=observedInputGen || discrete!=discreteStick) {
+    releaseWorldTouches();
+    observedInputGen = inputGen;
+    discreteStick = discrete;
+    }
   if(Gamepad::poll().connected || owner.padContext()!=PadCtx::World) {
     releaseWorldTouches();
     return;
     }
+  updatePadAxes();
   }
 
 void TouchInput::paintEvent(PaintEvent& e) {
@@ -514,12 +568,12 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
           }
         }
 
-    if(contains(wl.move,pos)) {
+    if(moveId<0 && contains(wl.move,pos)) {
       moveId = id; moveOrigin = pos;
       return;
       }
-    if(contains(wl.look,pos)) {
-      lookId = id; lookLast = pos;
+    if(lookId<0 && contains(wl.look,pos)) {
+      lookId = id; lookLast = lookOrigin = pos;
       return;
       }
     e.ignore();
@@ -589,6 +643,11 @@ void TouchInput::mouseDragEvent(MouseEvent& e) {
     }
 
   if(id==lookId) {
+    if(analogTouch && !discreteStick) {
+      const auto area = worldLayout().look;
+      lookStick = touchStick(pos-lookOrigin,std::min(area.w,area.h));
+      return;
+      }
     const Point d = pos - lookLast;
     lookLast = pos;
     ctrl.onRotateMouse(float(-d.x)*3.4f, float(-d.y)*1.7f);
@@ -597,6 +656,10 @@ void TouchInput::mouseDragEvent(MouseEvent& e) {
 
   if(id==moveId) {
     const auto wl = worldLayout();
+    if(analogTouch && !discreteStick) {
+      moveStick = touchStick(pos-moveOrigin,std::min(wl.move.w,wl.move.h));
+      return;
+      }
 #if defined(__IOS__)
     const int dz = std::max(1,std::min(wl.move.w,wl.move.h)/5);
 #else
@@ -663,10 +726,17 @@ void TouchInput::mouseUpEvent(MouseEvent& e) {
     if(mv[3]) ctrl.onKeyReleased(A::RotateR, M::Primary);
     mv[0]=mv[1]=mv[2]=mv[3]=false;
     moveId = -1;
+    moveStick = {};
+    updatePadAxes();
     return;
     }
 
-  if(id==lookId) { lookId = -1; return; }
+  if(id==lookId) {
+    lookId = -1;
+    lookStick = {};
+    updatePadAxes();
+    return;
+    }
 
   e.ignore();
   }

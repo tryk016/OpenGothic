@@ -570,7 +570,6 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
   if(suppressRtUntilRelease && (s.rt<=trigThresh || rtReleased))
     suppressRtUntilRelease = false;
 
-  const GamepadStick leftStick  = gamepadRadialDeadZone(s.lx,s.ly,analogDeadZone);
   const GamepadStick rightStick = gamepadRadialDeadZone(s.rx,s.ry,analogDeadZone);
   auto* pl = worldPlayer();
   const bool discreteStick = pl!=nullptr && pl->interactive()!=nullptr;
@@ -618,18 +617,12 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
     setWorldAxis(A::RotateL, false,A::RotateR,false);
     moveAxis.reset();
     turnAxis.reset();
-    const float magnitude = std::hypot(s.lx,s.ly);
     if(suppressLeftUntilNeutral) {
       leftStickActive = false;
       }
-    else if(leftStickActive) {
-      if(magnitude<=analogDeadZone)
-        leftStickActive = false;
-      }
-    else if(magnitude>=analogEngageZone) {
-      leftStickActive = true;
-      }
-    if(leftStickActive) {
+    else {
+      const auto leftStick = gamepadMovementStick(s.lx,s.ly,analogDeadZone,
+                                                  analogEngageZone,leftStickActive);
       axes.move = leftStick.y;
       axes.turn = leftStick.x;
       }

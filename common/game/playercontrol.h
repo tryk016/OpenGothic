@@ -18,7 +18,7 @@ class Gothic;
 
 struct PadAxes final {
   float move          = 0.f; // -1..1, back/forward
-  float turn          = 0.f; // -1..1, left/right
+  float turn          = 0.f; // -1..1, stick X: heading in directional mode, otherwise turning
   float lookYawRate   = 0.f; // rotation delta per millisecond
   float lookPitchRate = 0.f;
   };
@@ -33,6 +33,7 @@ class PlayerControl final {
     bool  isPressed(KeyCodec::Action a) const;
     void  onRotateMouse(float dAngleX, float dAngleY);
     void  setPadAxes(const PadAxes& axes);
+    bool  directionalMovement() const;
     void  setGamepadWalk(bool enabled);
     uint64_t inputGeneration() const { return inputGen; }
 
@@ -173,6 +174,7 @@ class PlayerControl final {
     uint64_t       inputGen       = 0;
     int            rotationAni    = 0;
     bool           g2Ctrl         = false;
+    bool           directionalPad = false;
 
     DialogMenu&    dlg;
     InventoryMenu& inv;

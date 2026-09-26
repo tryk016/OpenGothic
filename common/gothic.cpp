@@ -187,6 +187,9 @@ Gothic::Gothic() {
   defaults->set("GAMEPAD", "analogDeadZone", 0.10f);
   defaults->set("GAMEPAD", "analogEngageZone", 0.18f);
   defaults->set("GAMEPAD", "crossAxisGuard", 0.12f);
+#if defined(__IOS__)
+  defaults->set("GAMEPAD", "directionalMovement", 1);
+#endif
 
   defaults->set("SKY_OUTDOOR", "zSunName",   "unsun5.tga");
   defaults->set("SKY_OUTDOOR", "zSunSize",   200);

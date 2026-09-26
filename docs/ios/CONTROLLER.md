@@ -33,6 +33,34 @@ ring opening and disconnects release controller-owned state. Continuous inputs m
 return to neutral before they can re-arm. This prevents an input held in a menu or
 before app resume from leaking into gameplay.
 
+## Directional movement candidate
+
+On this test branch, iOS defaults to `[GAMEPAD] directionalMovement=1`.
+The left stick selects a camera-relative heading while exploring unarmed. The
+whole NPC turns toward it at up to 360 degrees/second using the shortest arc;
+forward locomotion starts within 45 degrees of that heading. Existing animation
+root motion, collision sweeps and jump/ledge probes share the NPC's actual facing.
+There is no alternate skeleton transform, movement-speed multiplier or save format.
+
+The camera keeps its independent yaw while exploring. The right touch stick now
+controls rotation rate: drag from the initial touch point and hold to keep turning;
+release to stop input immediately. Its radial filter and the left-stick activation
+hysteresis are shared with physical controllers. Touch retains the 15% sensitivity
+reduction and half-speed vertical look. Camera interpolation and an animation's
+normal stopping transition are not input latches.
+
+Combat, target lock, interactions, swimming/diving, first person and transformed
+monsters use classic movement. Airborne motion remains engine-controlled. MOBSI
+changes and input resets discard held touch gestures and require a fresh touch.
+Buttons and quick-ring bindings are unchanged. Keyboard movement takes priority;
+desktop directional movement is disabled, and Android's default remains classic.
+
+Set `directionalMovement=0` to restore the original turn-style left touch pad and
+drag-style camera, including the existing physical-controller locomotion. This
+candidate is not a public release; phone feel, simultaneous real fingers and real
+controller hardware still require device validation. It adapts the directional
+idea without copying zGamePad/Union hooks or source.
+
 ## Final mapping
 
 | Control | World action |

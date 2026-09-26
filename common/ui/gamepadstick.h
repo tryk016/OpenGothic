@@ -28,3 +28,13 @@ inline GamepadStick gamepadRadialDeadZone(float x, float y, float deadZone) {
   const float factor    = scaled/magnitude;
   return {x*factor,y*factor};
   }
+
+inline GamepadStick gamepadMovementStick(float x, float y, float deadZone,
+                                         float engageZone, bool& active) {
+  const auto stick = gamepadRadialDeadZone(x,y,deadZone);
+  if(stick.x==0.f && stick.y==0.f)
+    active = false;
+  else if(std::hypot(x,y)>=engageZone)
+    active = true;
+  return active ? stick : GamepadStick{};
+  }

@@ -7,6 +7,7 @@
 #include "utils/keycodec.h"
 #include "ui/padglyph.h"
 #include "ui/padsystemgesture.h"
+#include "ui/gamepadstick.h"
 
 class PlayerControl;
 class MainWindow;
@@ -22,6 +23,7 @@ class MainWindow;
 class TouchInput : public Tempest::Widget {
   public:
     TouchInput(MainWindow& owner, PlayerControl& ctrl);
+    ~TouchInput();
 
     void tick();
     void paintEvent(Tempest::PaintEvent& e);
@@ -60,6 +62,8 @@ class TouchInput : public Tempest::Widget {
 
     void aimRing(const Tempest::Point& pos);
     void releaseWorldTouches();
+    void loadConfig();
+    void updatePadAxes();
     bool dispatchSystemEffect(PadSystemGesture::Effect effect);
 
     MainWindow&    owner;
@@ -74,6 +78,13 @@ class TouchInput : public Tempest::Widget {
     PadSystemGesture systemGesture;
     Tempest::Point moveOrigin;
     Tempest::Point lookLast;
+    Tempest::Point lookOrigin;
+    GamepadStick   moveStick, lookStick;
+    uint64_t       observedInputGen = 0;
+    float          analogDeadZone = 0.10f, analogEngageZone = 0.18f;
+    float          lookSensitivity = 0.20f;
+    bool           analogTouch = false, invertY = false;
+    bool           moveActive = false, discreteStick = false;
     bool           mv[4] = {};    // forward, back, left, right currently pressed
     std::unordered_map<int,KeyCodec::Action> btnDown;
   };

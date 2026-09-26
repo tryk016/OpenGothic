@@ -1,7 +1,9 @@
 #include "playercontrol.h"
+#include "padmovement.h"
 
 #include <algorithm>
 #include <cmath>
+#include <Tempest/Platform>
 
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
@@ -31,6 +33,7 @@ PlayerControl::~PlayerControl() {
   }
 
 void PlayerControl::setupSettings() {
+  directionalPad = Gothic::inst().settingsGetI("GAMEPAD","directionalMovement")!=0;
   if(Gothic::inst().version().game==2) {
     g2Ctrl = Gothic::inst().settingsGetI("GAME","USEGOTHIC1CONTROLS")==0;
     } else {
@@ -317,6 +320,23 @@ void PlayerControl::setPadAxes(const PadAxes& axes) {
   padAxes.turn          = axis(axes.turn);
   padAxes.lookYawRate   = axis(axes.lookYawRate);
   padAxes.lookPitchRate = axis(axes.lookPitchRate);
+  }
+
+bool PlayerControl::directionalMovement() const {
+#if defined(__MOBILE_PLATFORM__)
+  auto pl = Gothic::inst().player();
+  auto camera = Gothic::inst().camera();
+  return directionalPad && pl!=nullptr && camera!=nullptr &&
+         !camera->isFirstPerson() && !camera->isFree() && !camera->isCutscene() &&
+         pl->weaponState()==WeaponState::NoWeapon && !pl->isMonster() && !pl->isDown() &&
+         pl->interactive()==nullptr && !pl->isInWater() && !pl->isSwim() && !pl->isDive() &&
+         pl->isAiQueueEmpty() && pl->isInState(ScriptFn()) &&
+         !inv.isActive() && !dlg.isActive() && !targetLock && !ctrl[Action::ActionGeneric] &&
+         !movement.forwardBackward.any() && !movement.strafeRightLeft.any() &&
+         !movement.turnRightLeft.any();
+#else
+  return false;
+#endif
   }
 
 void PlayerControl::setGamepadWalk(bool enabled) {
@@ -661,7 +681,7 @@ void PlayerControl::applyPadLook(uint64_t dt) {
   const float yaw     = padAxes.lookYawRate*frameMs;
   const float pitch   = padAxes.lookPitchRate*frameMs;
   camera->onRotateMouse(Tempest::PointF(-pitch,yaw));
-  if(!camera->isFree())
+  if(!camera->isFree() && !directionalMovement())
     onRotateMouse(yaw,pitch);
   }
 
@@ -837,8 +857,10 @@ void PlayerControl::implMove(uint64_t dt) {
     }
 
   int rotation = 0;
+  const bool directional = directionalMovement();
+  bool vectorMove = false;
   if(allowRot) {
-    const float turn = turnInput();
+    const float turn = directional ? 0.f : turnInput();
     if(turn<0.f) {
       rot += rspeed*-turn;
       rotation = -1;
@@ -860,6 +882,17 @@ void PlayerControl::implMove(uint64_t dt) {
     } else {
     rotMouse  = 0;
     rotMouseY = 0;
+    }
+
+  if(directional && allowRot && (padAxes.move!=0.f || padAxes.turn!=0.f) &&
+     !pl.isFalling() && !pl.isSlide() && !pl.isInAir() && !pl.isJump() && !pl.isJumpUp()) {
+    auto camera = Gothic::inst().camera();
+    const float target = PadMovement::heading(camera->spin().y,padAxes.turn,padAxes.move);
+    rot = PadMovement::turnToward(rot,target,dt);
+    vectorMove = PadMovement::facingMovement(rot,target);
+    rotation = rot>pl.rotation() ? -1 : (rot<pl.rotation() ? 1 : 0);
+    // Jump/ledge probes and root motion must use the same facing as the model.
+    pl.setDirection(rot);
     }
 
   pl.setDirectionY(rotY);
@@ -1011,7 +1044,11 @@ void PlayerControl::implMove(uint64_t dt) {
       }
     }
 
-  if(this->wantsToStrafeLeft()) {
+  if(directional) {
+    if(vectorMove)
+      ani = Npc::Anim::Move;
+    }
+  else if(this->wantsToStrafeLeft()) {
     ani = Npc::Anim::MoveL;
     }
   else if(this->wantsToStrafeRight()) {
