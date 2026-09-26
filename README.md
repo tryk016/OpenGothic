@@ -56,6 +56,11 @@ The on-screen controller includes two full-size analog sticks, A/B/X/Y,
 shoulders, triggers, stick clicks, View/Menu and a four-direction D-pad. It
 hides automatically when a physical controller is connected.
 
+When exploring without a weapon, the left stick moves relative to the camera.
+Holding the right stick turns the camera continuously; releasing it stops the
+turn. Combat and interactions retain their context-specific controls.
+The translucent touch layout places A/B/X/Y above the right stick.
+
 [![OpenGothic controller mapping](assets/controller/OpenGothic_Controller_Layout.svg)](assets/controller/OpenGothic_Controller_Layout.svg)
 
 | Action | Xbox | PlayStation |
@@ -78,6 +83,11 @@ hides automatically when a physical controller is connected.
 | Map / next target | D-pad right | D-pad right |
 | Inventory | View | Share / Create |
 | Game menu | Menu | Options |
+
+To assign an item to the Items ring using touch: highlight it in your inventory,
+tap **R3** above A, select a ring sector, then tap **RT**. **LT** clears the
+selected assignment and **B** returns. Selection stays highlighted after you
+lift your finger, so the editor works with one finger.
 
 When the main or in-game menu is open, **Y/Triangle** opens the native iOS
 device settings with the controller diagram, Off/30/60 FPS selection and UI
