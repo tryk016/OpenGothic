@@ -148,7 +148,21 @@ void GamepadInput::ringCommit() {
   QuickRing* r = ringWeapons.isOpen() ? &ringWeapons : (ringItems.isOpen() ? &ringItems : nullptr);
   if(r==nullptr)
     return;
+  if(r->isEditing()) {
+    if(auto* pl=worldPlayer(); pl!=nullptr && r->assignSelection(*pl))
+      Haptics::impact(Haptics::Light);
+    owner.update();
+    return;
+    }
   activateRingSelection(*r);
+  }
+
+void GamepadInput::ringClear() {
+  if(!ringItems.isOpen() || !ringItems.isEditing())
+    return;
+  if(auto* pl=worldPlayer(); pl!=nullptr && ringItems.clearSelection(*pl))
+    Haptics::impact(Haptics::Light);
+  owner.update();
   }
 
 void GamepadInput::ringCancel() {
@@ -210,13 +224,10 @@ void GamepadInput::tickRing(
     // single-trigger press instead of assigning and immediately deleting.
     if(assign==clear)
       return;
-    if(auto* pl=worldPlayer()) {
-      const bool changed = assign ? r.assignSelection(*pl)
-                                  : r.clearSelection(*pl);
-      if(changed)
-        Haptics::impact(Haptics::Light);
-      owner.update();
-      }
+    if(assign)
+      ringCommit();
+    else
+      ringClear();
     return;
     }
   if(hasButtonEvent(events,GamepadButton::DpadUp,true) ||
@@ -448,15 +459,14 @@ void GamepadInput::tick(uint64_t dt) {
     suppressCarriedWorldInput();
     observedInputGen = inputGen;
     }
+  if(const auto* ring=activeRing()) {
+    const PadCtx ringCtx = ring->isEditing() ? PadCtx::Inventory : PadCtx::World;
+    if(owner.padContext()!=ringCtx)
+      ringCancel();
+    }
   if(!s.connected) {                 // pad vanished mid-hold -> release everything
     if(prev.connected) {
       releaseAllWorld();
-      ringCancel();
-      }
-    else if(ringOpen() && owner.padContext()!=PadCtx::World) {
-      // Touch uses the same rings while no physical pad is connected. Keep a
-      // gameplay ring alive, but never let it retain items from an old world
-      // or draw above a menu/loading screen.
       ringCancel();
       }
     prev    = GamepadState{};
@@ -464,21 +474,10 @@ void GamepadInput::tick(uint64_t dt) {
     return;
     }
 
-  // An open radial panel captures all input until confirm or cancel. The
-  // normal panels own World; the assignment editor deliberately owns the
-  // still-open Inventory behind it.
-  if(ringWeapons.isOpen() || ringItems.isOpen()) {
-    QuickRing& ring = ringWeapons.isOpen() ? ringWeapons : ringItems;
-    const PadCtx ringCtx = owner.padContext();
-    const bool ownsContext = ring.isEditing()
-                           ? ringCtx==PadCtx::Inventory
-                           : ringCtx==PadCtx::World;
-    if(ownsContext) {
-      tickRing(s,input.events);
-      prev = s;
-      return;
-      }
-    ringCancel();
+  if(ringOpen()) {
+    tickRing(s,input.events);
+    prev = s;
+    return;
     }
 
   const PadCtx ctx = owner.padContext();

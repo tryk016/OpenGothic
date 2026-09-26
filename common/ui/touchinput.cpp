@@ -48,6 +48,7 @@ TouchInput::~TouchInput() {
   }
 
 void TouchInput::loadConfig() {
+  ringId = -1;
   releaseWorldTouches();
   auto& g = Gothic::inst();
   auto f = [](const char* name, float fallback) {
@@ -242,6 +243,11 @@ std::array<TouchInput::MBtn,6> TouchInput::menuLayout() const {
 #endif
   }
 
+TouchInput::PadArea TouchInput::assignmentButton() const {
+  const auto a = menuLayout()[4];
+  return {a.x,a.y-a.s-std::max(1,a.s/4),a.s,a.s};
+  }
+
 std::array<TouchInput::MBtn,4> TouchInput::dialogLayout() const {
   const int W = w(), H = h();
 #if defined(__IOS__)
@@ -323,7 +329,6 @@ void TouchInput::releaseWorldTouches() {
   moveActive = false;
   moveId = -1;
   lookId = -1;
-  ringId = -1;
   if(walkId>=0)
     ctrl.setGamepadWalk(false);
   walkId = -1;
@@ -358,11 +363,15 @@ void TouchInput::tick() {
   auto pl = Gothic::inst().player();
   const bool discrete = pl!=nullptr && pl->interactive()!=nullptr;
   if(inputGen!=observedInputGen || discrete!=discreteStick) {
+    ringId = -1;
     releaseWorldTouches();
     observedInputGen = inputGen;
     discreteStick = discrete;
     }
-  if(Gamepad::poll().connected || owner.padContext()!=PadCtx::World) {
+  const bool connected = Gamepad::poll().connected;
+  if(connected || !owner.padRingOpen())
+    ringId = -1;
+  if(connected || owner.padContext()!=PadCtx::World) {
     releaseWorldTouches();
     return;
     }
@@ -382,14 +391,13 @@ void TouchInput::paintEvent(PaintEvent& e) {
     owner.padPaintRing(e);
     if(Gamepad::poll().connected)
       return;
-    // Keep the full overlay off the radial sectors, but retain the three
-    // modal controls in the empty corners: panel switch and explicit cancel.
     Painter p(e);
     auto& fnt = Resources::font(Gothic::interfaceScale(this));
     const auto c = ringControls();
-    PadGlyph::draw(p,fnt,PadGlyph::DPadUp,  c[0].x,c[0].y,c[0].w);
-    PadGlyph::draw(p,fnt,PadGlyph::DPadDown,c[1].x,c[1].y,c[1].w);
-    PadGlyph::draw(p,fnt,PadGlyph::B,       c[2].x,c[2].y,c[2].w);
+    const bool editing = owner.padRingEditing();
+    PadGlyph::draw(p,fnt,editing ? PadGlyph::RT : PadGlyph::DPadUp,  c[0].x,c[0].y,c[0].w);
+    PadGlyph::draw(p,fnt,editing ? PadGlyph::LT : PadGlyph::DPadDown,c[1].x,c[1].y,c[1].w);
+    PadGlyph::draw(p,fnt,PadGlyph::B,c[2].x,c[2].y,c[2].w);
     return;
     }
   if(Gamepad::poll().connected)
@@ -445,6 +453,10 @@ void TouchInput::paintEvent(PaintEvent& e) {
         PadGlyph::draw(p, fnt, glyphOfKey(b.key), b.x, b.y, b.s);
       for(auto& b:characterPageLayout())
         PadGlyph::draw(p,fnt,b.glyph,b.x,b.y,b.s);
+      if(owner.padInventorySelectedItem()) {
+        const auto b = assignmentButton();
+        PadGlyph::draw(p,fnt,PadGlyph::R3,b.x,b.y,b.w);
+        }
       break;
       }
     case PadCtx::Loading:
@@ -454,6 +466,7 @@ void TouchInput::paintEvent(PaintEvent& e) {
 
 void TouchInput::mouseDownEvent(MouseEvent& e) {
   if(Gamepad::poll().connected) {
+    ringId = -1;
     releaseWorldTouches();
     // A controller-driven ring is modal above InventoryMenu. Keep the event
     // accepted here; ignore() would forward the tap to the highlighted item
@@ -470,28 +483,33 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
 
   if(owner.padVideoActive()) { owner.padSkipVideo(); return; }   // any tap skips the intro/cutscene
 
-  if(ctx==PadCtx::World) {
-    // A radial ring is open -> corners switch/cancel; every other touch aims
-    // and commits on release.
-    if(owner.padRingOpen()) {
-      const auto c = ringControls();
-      if(contains(c[2],pos)) {
-        owner.padRingCancel();
-        return;
-        }
-      if(contains(c[0],pos)) {
-        owner.padOpenItemRing();
-        return;
-        }
-      if(contains(c[1],pos)) {
-        owner.padOpenWeaponsRing();
-        return;
-        }
-      ringId = id;
-      aimRing(pos);
+  if(owner.padRingOpen()) {
+    const auto c = ringControls();
+    if(contains(c[2],pos)) {
+      ringId = -1;
+      owner.padRingCancel();
       return;
       }
+    if(contains(c[0],pos)) {
+      ringId = -1;
+      if(owner.padRingEditing()) owner.padRingCommit();
+      else                       owner.padOpenItemRing();
+      return;
+      }
+    if(contains(c[1],pos)) {
+      ringId = -1;
+      if(owner.padRingEditing()) owner.padRingClear();
+      else                       owner.padOpenWeaponsRing();
+      return;
+      }
+    if(ringId<0) {
+      ringId = id;
+      aimRing(pos);
+      }
+    return;
+    }
 
+  if(ctx==PadCtx::World) {
     auto* pl = Gothic::inst().player();
     const WeaponState ws = pl!=nullptr ? pl->weaponState() : WeaponState::NoWeapon;
     const bool melee  = ws==WeaponState::Fist || ws==WeaponState::W1H || ws==WeaponState::W2H;
@@ -595,6 +613,10 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
     return;
     }
   if(ctx==PadCtx::Inventory) {
+    if(contains(assignmentButton(),pos)) {
+      owner.padOpenItemAssignmentRing();
+      return;
+      }
     for(auto& b:characterPageLayout())
       if(pos.x>=b.x && pos.x<b.x+b.s && pos.y>=b.y && pos.y<b.y+b.s) {
         owner.padInventoryCategory(b.direction);
@@ -631,15 +653,15 @@ void TouchInput::mouseDragEvent(MouseEvent& e) {
     e.ignore();
     return;
     }
-  if(owner.padContext()!=PadCtx::World) { e.ignore(); return; }
-
   const Point pos = e.pos();
   const int   id  = e.mouseID;
 
-  if(id==ringId && owner.padRingOpen()) {
-    aimRing(pos);
+  if(owner.padRingOpen()) {
+    if(id==ringId)
+      aimRing(pos);
     return;
     }
+  if(owner.padContext()!=PadCtx::World) { e.ignore(); return; }
 
   if(id==lookId) {
     if(analogTouch && !discreteStick) {
@@ -687,11 +709,13 @@ void TouchInput::mouseUpEvent(MouseEvent& e) {
   const int id = e.mouseID;
 
   if(id==ringId) {
-    if(owner.padRingOpen())
+    if(owner.padRingOpen() && !owner.padRingEditing())
       owner.padRingCommit();
     ringId = -1;
     return;
     }
+  if(owner.padRingOpen())
+    return;
 
   auto releaseSystem = [&](int& touchId, PadSystemGesture::Button button) {
     if(id!=touchId)

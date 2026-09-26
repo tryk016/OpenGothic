@@ -733,10 +733,16 @@ PadCtx MainWindow::padContext() const {
 
 #if defined(__MOBILE_PLATFORM__)
 bool MainWindow::padRingOpen() const          { return gamepad.ringOpen(); }
+bool MainWindow::padRingEditing() const {
+  const auto* ring = gamepad.activeRing();
+  return ring!=nullptr && ring->isEditing();
+  }
 void MainWindow::padOpenWeaponsRing()         { gamepad.openWeaponsRing(); }
 void MainWindow::padOpenItemRing()            { gamepad.openItemRing(); }
+void MainWindow::padOpenItemAssignmentRing()  { gamepad.openItemAssignmentRing(); }
 void MainWindow::padRingAim(float nx,float ny){ gamepad.ringAim(nx,ny); }
 void MainWindow::padRingCommit()              { gamepad.ringCommit(); }
+void MainWindow::padRingClear()               { gamepad.ringClear(); }
 void MainWindow::padRingCancel()              { gamepad.ringCancel(); }
 void MainWindow::padPaintRing(PaintEvent& e)  {
   if(auto* ring=gamepad.activeRing()) {

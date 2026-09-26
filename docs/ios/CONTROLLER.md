@@ -183,10 +183,14 @@ dead zone and hysteresis (`0.28`, inner transition `0.62`, outer transition `0.7
 A or RT commits; B cancels; D-pad Up/Down switches panels. Empty sectors remain
 visible but commit nothing.
 
-Touch uses the same two modal panels. While open, the full virtual-pad overlay is
-hidden and only corner D-pad Up/Down and B controls remain. A drag elsewhere selects;
-release commits. A touch ring is cancelled when the app leaves `PadCtx::World`, so it
-cannot retain a synthetic item from an unloaded world.
+Touch uses the same two modal panels. In gameplay, the corner controls switch
+panels (D-pad Up/Down) or cancel (B); dragging elsewhere selects and release uses
+the selected item. In the player's inventory, R3 above A opens the assignment
+editor for the highlighted non-gold item. Tap or drag to select a sector, then
+release: the selection stays highlighted. The corner controls become RT (assign),
+LT (clear) and B (back), so editing needs only one finger. Assigning returns to
+the inventory; clearing keeps the editor open. A ring is cancelled on leaving
+its owning context (`World` for use, `Inventory` for editing), including loading.
 
 Rendering is procedural in `common/ui/quickring.cpp`: subdivided triangle sectors,
 dark translucent fill, amber border and gold selection. Live 3D icons are collected in

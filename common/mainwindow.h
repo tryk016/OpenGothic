@@ -64,10 +64,13 @@ class MainWindow : public Tempest::Window {
 #if defined(__MOBILE_PLATFORM__)
     // Touch-overlay -> gamepad ring and inventory navigation bridges.
     bool padRingOpen() const;
+    bool padRingEditing() const;
     void padOpenWeaponsRing();
     void padOpenItemRing();
+    void padOpenItemAssignmentRing();
     void padRingAim(float nx, float ny);
     void padRingCommit();
+    void padRingClear();
     void padRingCancel();
     void padPaintRing(Tempest::PaintEvent& e);
     void padOpenMap();

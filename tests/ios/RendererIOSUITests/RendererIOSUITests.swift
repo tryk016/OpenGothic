@@ -39,6 +39,83 @@ final class VectorControlsUITests: XCTestCase {
   func testSlot1() { exercise(slot: 1) }
   func testSlot4() { exercise(slot: 4) }
 
+  func testTouchItemAssignment() {
+    let app = XCUIApplication(bundleIdentifier: bundleID)
+    app.launchArguments = ["-nomenu", "-save", "1"]
+    addTeardownBlock { app.terminate() }
+    app.launch()
+    XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30))
+    wait(35)
+    point(app,0.472,0.07).tap() // View: inventory
+    wait(2)
+    screenshot("ring-00-inventory",app)
+
+    let edit = point(app,0.845,0.755) // R3 above inventory A
+    let assign = point(app,0.097,0.79) // RT in the editor
+    let clear = point(app,0.097,0.90) // LT in the editor
+    let cancel = point(app,0.902,0.90) // B
+    edit.tap()
+    wait(3)
+    screenshot("ring-01-editor-neutral",app)
+    assign.tap() // No selection: must not assign or close.
+    screenshot("ring-02-no-selection",app)
+    cancel.tap()
+    screenshot("ring-02-cancel-without-changes",app)
+    edit.tap()
+    point(app,0.50,0.20).press(forDuration: 0.1,
+      thenDragTo: point(app,0.64,0.50),
+      withVelocity: .slow, thenHoldForDuration: 1)
+    wait(2)
+    screenshot("ring-03-selected-after-release",app)
+    assign.tap()
+    wait(2)
+    screenshot("ring-04-assigned-inventory",app)
+
+    edit.tap()
+    wait(1)
+    point(app,0.64,0.50).tap()
+    screenshot("ring-05-binding-reopened",app)
+    clear.tap()
+    screenshot("ring-06-binding-cleared",app)
+    clear.tap() // Already empty: no other slot should change.
+    cancel.tap()
+    screenshot("ring-07-cancelled-inventory",app)
+
+    edit.tap()
+    point(app,0.50,0.35).tap() // Inner row, release keeps the selection.
+    assign.tap()
+    screenshot("ring-08-inner-assigned",app)
+    cancel.tap() // Close inventory.
+    point(app,0.463,0.68).tap() // D-pad Up: use item ring.
+    wait(1)
+    screenshot("ring-09-world-items",app)
+    point(app,0.50,0.35).tap() // Use the assigned weapon via touch release.
+    wait(2)
+    screenshot("ring-10-used-from-world",app)
+    point(app,0.463,0.68).tap()
+    cancel.tap()
+    screenshot("ring-11-cancelled-world",app)
+  }
+
+  func testGoldCannotBeAssigned() {
+    let app = XCUIApplication(bundleIdentifier: bundleID)
+    app.launchArguments = ["-nomenu", "-save", "1"]
+    addTeardownBlock { app.terminate() }
+    app.launch()
+    XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30))
+    wait(35)
+    point(app,0.472,0.07).tap()
+    point(app,0.148,0.879).tap() // Two rows down, one column right: gold in slot 1.
+    point(app,0.148,0.879).tap()
+    point(app,0.205,0.747).tap()
+    screenshot("ring-gold-00-selected",app)
+    point(app,0.845,0.755).tap() // No R3 shown; this must not open the editor.
+    wait(2)
+    screenshot("ring-gold-01-editor-rejected",app)
+    point(app,0.902,0.90).tap()
+    screenshot("ring-gold-02-back-to-world",app)
+  }
+
   func testCameraHoldAndRelease() {
     let app = XCUIApplication(bundleIdentifier: bundleID)
     app.launchArguments = ["-nomenu", "-save", "1"]

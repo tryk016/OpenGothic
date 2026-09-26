@@ -44,8 +44,10 @@ class GamepadInput {
     bool  ringOpen() const;
     void  openWeaponsRing();
     void  openItemRing();
+    void  openItemAssignmentRing();
     void  ringAim(float nx, float ny);
     void  ringCommit();
+    void  ringClear();
     void  ringCancel();
     void  openMap();
 
@@ -106,7 +108,6 @@ class GamepadInput {
     void  tickRing(const GamepadState& s,
                    const std::vector<GamepadButtonEvent>& events);
     void  openRing(QuickRing& r);          // fill from inventory + open
-    void  openItemAssignmentRing();        // selected inventory item -> editor
     void  activateRingSelection(QuickRing& r);
     void  pulseWorldAction(KeyCodec::Action action);
     Npc*  worldPlayer() const;             // current player npc, or nullptr

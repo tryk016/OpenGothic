@@ -52,7 +52,8 @@ class TouchInput : public Tempest::Widget {
 #endif
 
     WorldLayout worldLayout()         const;   // buttons and both touch-stick hit areas
-    std::array<PadArea,3> ringControls() const; // item, weapons, cancel
+    std::array<PadArea,3> ringControls() const;
+    PadArea assignmentButton() const;
     std::array<MBtn,6> menuLayout()   const;   // menu / inventory: dpad + ok/back
     std::array<MBtn,4> dialogLayout() const;   // dialogue: up/down/select/skip
     std::array<PageBtn,2> characterPageLayout() const;

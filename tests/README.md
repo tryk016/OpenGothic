@@ -26,6 +26,14 @@ and actions. A green test alone is not proof of correct motion or button hitboxe
 It does not validate physical controllers, simultaneous fingers, thermal behavior
 or gameplay responsiveness on a real phone.
 
+`testTouchItemAssignment` exercises inventory R3, a no-selection confirm, dragged
+outer selection, release followed by RT assignment, reopening, LT clearing,
+cancellation, an inner-row assignment and use from the world ring.
+`testGoldCannotBeAssigned` checks that gold has no editor entry point.
+These change only the loaded session's layout, not the save file. Review the
+named screenshots to verify the slots and that the inventory item was not used
+or equipped underneath the editor.
+
 Screenshots use `XCUIScreen.main` because the application accessibility frame can
 be stale after the game forces its landscape orientation. `testCameraHoldAndRelease`
 also captures the world 12 seconds after releasing a sustained right-stick input.
