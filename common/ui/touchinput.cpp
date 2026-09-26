@@ -413,10 +413,10 @@ void TouchInput::paintEvent(PaintEvent& e) {
     case PadCtx::World: {
       const auto wl = worldLayout();
 #if defined(__IOS__)
-      PadGlyph::drawTouch(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.72f);
-      PadGlyph::drawTouch(p,fnt,PadGlyph::RStick,wl.look.x,wl.look.y,wl.look.w,0.72f);
+      PadGlyph::drawTouch(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.50f);
+      PadGlyph::drawTouch(p,fnt,PadGlyph::RStick,wl.look.x,wl.look.y,wl.look.w,0.50f);
       for(auto& b:wl.buttons)
-        PadGlyph::drawTouch(p,fnt,b.glyph,b.x,b.y,b.s,0.76f);
+        PadGlyph::drawTouch(p,fnt,b.glyph,b.x,b.y,b.s,0.52f);
 #else
       PadGlyph::draw(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.7f);
       for(auto& b:wl.buttons)
