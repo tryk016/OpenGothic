@@ -116,14 +116,13 @@ TouchInput::WorldLayout TouchInput::worldLayout() const {
   const int step = s+g;
 
   const int faceCx = cb.right-m-s/2-step;
-  const int faceCy = cb.bottom-m-s/2-step;
   // Width also participates so iPad's 4:3 landscape does not let two sticks
   // crowd the D-pad and face cluster. Phones still get a roughly 30%-height
   // stick, while tablets use a balanced ~1/6-content-width diameter.
   const int stick  = std::max(2*s,std::min(3*s,cw/6));
-  const int faceLeft = faceCx-step-s/2;
-  const int rightStickX = std::max(cb.left+cw/2,faceLeft-2*g-stick);
+  const int rightStickX = faceCx-stick/2;
   const int stickY = cb.bottom-m-stick;
+  const int faceCy = stickY-2*g-step-s/2;
   const int desiredDcx = cb.left+int(float(cw)*0.43f);
   const int minDcx = cb.left+m+stick+g+step;
   const int maxDcx = rightStickX-g-step-s;
@@ -134,7 +133,7 @@ TouchInput::WorldLayout TouchInput::worldLayout() const {
   namespace G = PadGlyph;
   using     K = TAct;
   WorldLayout ret{{{
-    // Equal-size face buttons in a diamond, clear of the full-size right stick.
+    // Equal-size face buttons in a diamond above the right stick.
     { faceCx-s/2,      faceCy+step-s/2, s, G::A, K::Interact, A::ActionGeneric },
     { faceCx+step-s/2, faceCy-s/2,      s, G::B, K::Special,  A::PadSpecial    },
     { faceCx-step-s/2, faceCy-s/2,      s, G::X, K::Key,      A::Jump          },
@@ -146,7 +145,7 @@ TouchInput::WorldLayout TouchInput::worldLayout() const {
     { cb.left+m+s+2*g,       row, s, G::LB, K::Lb, A::PadAttackLeft   },
     // Stick clicks.
     { cb.left+m, cb.top+ch/2-s/2, s, G::L3, K::Key,  A::Sneak         },
-    { rightStickX+(stick-s)/2, cb.top+ch/2-s/2, s, G::R3, K::Lock, A::ActionGeneric },
+    { faceCx-step-3*s/2, faceCy+step/2-s/2, s, G::R3, K::Lock, A::ActionGeneric },
     // D-pad and ring/focus actions.
     { dcx,      dcy-step, s, G::DPadUp,    K::ItemRing,      A::Idle },
     { dcx,      dcy+step, s, G::DPadDown,  K::WeaponsRing,   A::Idle },
@@ -413,10 +412,10 @@ void TouchInput::paintEvent(PaintEvent& e) {
     case PadCtx::World: {
       const auto wl = worldLayout();
 #if defined(__IOS__)
-      PadGlyph::drawTouch(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.30f);
-      PadGlyph::drawTouch(p,fnt,PadGlyph::RStick,wl.look.x,wl.look.y,wl.look.w,0.30f);
+      PadGlyph::drawTouch(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.26f);
+      PadGlyph::drawTouch(p,fnt,PadGlyph::RStick,wl.look.x,wl.look.y,wl.look.w,0.26f);
       for(auto& b:wl.buttons)
-        PadGlyph::drawTouch(p,fnt,b.glyph,b.x,b.y,b.s,0.32f);
+        PadGlyph::drawTouch(p,fnt,b.glyph,b.x,b.y,b.s,0.27f);
 #else
       PadGlyph::draw(p,fnt,PadGlyph::LStick,wl.move.x,wl.move.y,wl.move.w,0.7f);
       for(auto& b:wl.buttons)

@@ -67,6 +67,12 @@ iOS device, Simulator and macOS builds passed. The separate classic-profile
 smoke check also passed. See `tests/README.md` for the harness and its limits;
 these results do not replace physical multitouch, controller or gameplay testing.
 
+The iOS touch overlay places the right stick in the lower-right corner, with
+the A/B/X/Y diamond directly above it. R3 sits just left of the face buttons,
+halfway between X and A vertically. Rendering and hit testing share the same
+layout; both sticks and the face buttons keep their existing sizes.
+Outline/fill opacity is reduced while labels stay readable.
+
 ## Final mapping
 
 | Control | World action |

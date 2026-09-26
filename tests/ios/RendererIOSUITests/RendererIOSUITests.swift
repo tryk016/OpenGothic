@@ -47,10 +47,10 @@ final class VectorControlsUITests: XCTestCase {
     XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30))
     wait(30)
     screenshot("camera-00-neutral",app)
-    holdStick(app,x: 0.69,y: 0.80,dx: 0.015,dy: 0.00,seconds: 1)
+    holdStick(app,x: 0.856,y: 0.80,dx: 0.015,dy: 0.00,seconds: 1)
     wait(4)
     screenshot("camera-01-short-hold-released",app)
-    holdStick(app,x: 0.69,y: 0.80,dx: 0.015,dy: 0.00,seconds: 4)
+    holdStick(app,x: 0.856,y: 0.80,dx: 0.015,dy: 0.00,seconds: 4)
     screenshot("camera-02-long-hold-released",app)
     wait(12)
     screenshot("camera-03-neutral-again",app)
@@ -78,15 +78,17 @@ final class VectorControlsUITests: XCTestCase {
     wait(1)
     screenshot("slot\(slot)-04-back-released",app)
 
-    holdStick(app,x: 0.69,y: 0.80,dx: 0.03,dy: 0.00,seconds: 2)
+    holdStick(app,x: 0.856,y: 0.80,dx: 0.03,dy: 0.00,seconds: 2)
     screenshot("slot\(slot)-05-camera-released",app)
     wait(3)
     screenshot("slot\(slot)-06-camera-settled",app)
 
-    point(app,0.807,0.78).tap() // iPhone 16 Pro Max: X
+    point(app,0.762,0.525).tap() // R3: left of X, midway between X and A
+    screenshot("slot\(slot)-06-r3",app)
+    point(app,0.807,0.47).tap() // iPhone 16 Pro Max: X
     wait(2)
     screenshot("slot\(slot)-07-jump",app)
-    point(app,0.856,0.675).tap() // Y: classic combat locomotion
+    point(app,0.856,0.365).tap() // Y: classic combat locomotion
     wait(3)
     holdStick(app,x: 0.13,y: 0.80,dx: 0.04,dy: -0.07,seconds: 1)
     screenshot("slot\(slot)-08-weapon-movement",app)
