@@ -891,8 +891,6 @@ void PlayerControl::implMove(uint64_t dt) {
     rot = PadMovement::turnToward(rot,target,dt);
     vectorMove = PadMovement::facingMovement(rot,target);
     rotation = rot>pl.rotation() ? -1 : (rot<pl.rotation() ? 1 : 0);
-    // Jump/ledge probes and root motion must use the same facing as the model.
-    pl.setDirection(rot);
     }
 
   pl.setDirectionY(rotY);
@@ -1095,6 +1093,9 @@ void PlayerControl::implMove(uint64_t dt) {
         }
       }
     else if(pl.isStanding()) {
+      // Ledge probes must use the requested movement heading.
+      if(directional)
+        pl.setDirection(rot);
       auto jump = pl.tryJump();
       if(!pl.isFalling() && !pl.isSlide() && jump.anim!=Npc::Anim::Jump){
         pl.startClimb(jump);
