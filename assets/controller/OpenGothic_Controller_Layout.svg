@@ -144,7 +144,7 @@
     <rect x="1130" y="356" width="430" height="48" rx="11" class="card"/><rect x="1144" y="363" width="125" height="34" rx="17" class="badge"/>
     <text x="1206" y="386" class="key">B / ○</text><text x="1285" y="387" class="action">Melee special / Back</text>
     <rect x="1130" y="415" width="430" height="48" rx="11" class="card"/><rect x="1144" y="422" width="125" height="34" rx="17" class="badge"/>
-    <text x="1206" y="445" class="key">A / ✕</text><text x="1285" y="446" class="action">Interact / use / confirm</text>
+    <text x="1206" y="445" class="key">A / ✕</text><text x="1285" y="436" class="action">Interact / use / confirm</text><text x="1285" y="455" class="small">Armed: attack / shoot / cast</text>
     <rect x="1130" y="474" width="430" height="48" rx="11" class="card"/><rect x="1144" y="481" width="125" height="34" rx="17" class="badge"/>
     <text x="1206" y="504" class="key">X / □</text><text x="1285" y="505" class="action">Jump / climb</text>
 

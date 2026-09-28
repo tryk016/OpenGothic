@@ -42,7 +42,7 @@ crossing UI or lifecycle boundaries.
 
 | Action | Xbox | PlayStation |
 |---|---|---|
-| Interact / use / confirm | A | Cross |
+| Unarmed: interact/use; armed: attack/shoot/cast; UI: confirm | A | Cross |
 | Melee special / back | B | Circle |
 | Jump / climb | X | Square |
 | Draw or sheathe weapon | Y | Triangle |

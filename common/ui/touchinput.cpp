@@ -317,6 +317,12 @@ void TouchInput::aimRing(const Point& pos) {
   owner.padRingAim(nx, ny);
   }
 
+bool TouchInput::hasHeldAction(A action) const {
+  return std::any_of(btnDown.begin(),btnDown.end(),[action](const auto& entry) {
+    return entry.second==action;
+    });
+  }
+
 void TouchInput::releaseWorldTouches() {
   if(mv[0]) ctrl.onKeyReleased(A::Forward, M::Primary);
   if(mv[1]) ctrl.onKeyReleased(A::Back,    M::Primary);
@@ -336,9 +342,13 @@ void TouchInput::releaseWorldTouches() {
   menuId = -1;
   systemGesture.reset();
 
-  for(auto& held : btnDown)
-    ctrl.onKeyReleased(held.second, M::Primary);
-  btnDown.clear();
+  while(!btnDown.empty()) {
+    auto it = btnDown.begin();
+    const A action = it->second;
+    btnDown.erase(it);
+    if(action!=A::Idle && !hasHeldAction(action))
+      ctrl.onKeyReleased(action,M::Primary);
+    }
   }
 
 bool TouchInput::dispatchSystemEffect(PadSystemGesture::Effect effect) {
@@ -374,6 +384,15 @@ void TouchInput::tick() {
   if(connected || owner.padContext()!=PadCtx::World) {
     releaseWorldTouches();
     return;
+    }
+  const bool armed = pl!=nullptr && pl->weaponState()!=WeaponState::NoWeapon;
+  for(auto& [id,action]:btnDown) {
+    if((armed && action==A::ActionGeneric) || (!armed && action==A::PadAttack)) {
+      const A previous = action;
+      action = A::Idle;
+      if(!hasHeldAction(previous))
+        ctrl.onKeyReleased(previous,M::Primary);
+      }
     }
   updatePadAxes();
   }
@@ -516,8 +535,10 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
     const bool ranged = ws==WeaponState::Bow || ws==WeaponState::CBow;
     const bool armed  = ws!=WeaponState::NoWeapon;
     auto holdAction = [&](A action) {
-      ctrl.onKeyPressed(action,Event::K_NoKey,M::Primary);
+      const bool held = hasHeldAction(action);
       btnDown[id] = action;
+      if(!held)
+        ctrl.onKeyPressed(action,Event::K_NoKey,M::Primary);
       };
 
     const auto wl = worldLayout();
@@ -528,8 +549,7 @@ void TouchInput::mouseDownEvent(MouseEvent& e) {
             holdAction(b.act);
             return;
           case TAct::Interact:
-            if(!armed)
-              holdAction(A::ActionGeneric);
+            holdAction(armed ? A::PadAttack : A::ActionGeneric);
             return;
           case TAct::Special:
             if(melee)
@@ -737,8 +757,10 @@ void TouchInput::mouseUpEvent(MouseEvent& e) {
 
   auto it = btnDown.find(id);
   if(it!=btnDown.end()) {
-    ctrl.onKeyReleased(it->second, M::Primary);
+    const A action = it->second;
     btnDown.erase(it);
+    if(action!=A::Idle && !hasHeldAction(action))
+      ctrl.onKeyReleased(action,M::Primary);
     return;
     }
 

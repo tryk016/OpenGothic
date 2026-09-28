@@ -73,6 +73,7 @@ class GamepadInput {
     bool             suppressLtUntilRelease = true;
     bool             suppressRtUntilRelease = true;
     bool             gamepadWalkHeld = false;
+    KeyCodec::Action aLatchedSemantic = KeyCodec::Idle;
     bool             ltSemanticLatched = false;
     KeyCodec::Action ltLatchedSemantic = KeyCodec::Idle;
     PadSystemGesture systemGesture;
@@ -92,7 +93,8 @@ class GamepadInput {
     void setWorldHeld(KeyCodec::Action a, bool held);             // stateful world action
     void setWorldButton(GamepadButton button, bool physicalHeld,
                         KeyCodec::Action action,
-                        const std::vector<GamepadButtonEvent>& events);
+                        const std::vector<GamepadButtonEvent>& events,
+                        bool alternateHeld = false);
     void setWorldAxis(KeyCodec::Action negative, bool negativeHeld,
                       KeyCodec::Action positive, bool positiveHeld);
     void key   (bool now, bool before, Tempest::Event::KeyType k);// synthetic KeyEvent

@@ -65,7 +65,7 @@ The translucent touch layout places A/B/X/Y above the right stick.
 
 | Action | Xbox | PlayStation |
 |---|---|---|
-| Interact / use / confirm | A | Cross |
+| Unarmed: interact/use; armed: attack/shoot/cast; UI: confirm | A | Cross |
 | Melee special / back | B | Circle |
 | Jump / climb | X | Square |
 | Draw or sheathe weapon | Y | Triangle |

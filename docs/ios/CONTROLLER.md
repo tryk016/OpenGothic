@@ -77,7 +77,7 @@ Outline/fill opacity is reduced while labels stay readable.
 
 | Control | World action |
 |---|---|
-| A / Cross | Interact/use while unarmed; confirm in UI/rings |
+| A / Cross | Unarmed: interact/use; armed: attack/shoot/cast; confirm in UI/rings |
 | B / Circle | Melee special; Back in UI; cancel a ring |
 | X / Square | Jump/climb |
 | Y / Triangle | Draw/sheathe the last weapon |
@@ -129,11 +129,19 @@ It sends internal actions declared in `common/utils/keycodec.h`:
 still held. Priority is attack, special, left, right, block, aim. Releasing RT while LT
 is still held therefore returns to aim instead of clearing combat input.
 
+Touch and physical A use the same armed `PadAttack` action as RT. The two buttons
+share one logical hold: adding the other button does not repeat the attack, and
+releasing one does not cancel the other. The final release ends the action. Fast
+digital A taps retain the existing one-tick pulse behavior.
+
 Contextual controls must never change meaning during one physical hold. If
-`WeaponState` changes while LT/RT/LB/RB remains down, the dispatcher releases the old
-semantic action and suppresses the new one until a real release. LT also latches an
-explicit `Idle` meaning in Mage state, preventing a held no-op LT from drawing a bow
-after magic is sheathed.
+`WeaponState` changes the action while A/LT/RT/LB/RB remains down, the dispatcher
+releases the old semantic action and suppresses the new one until a real release.
+LT also latches an explicit `Idle` meaning in Mage state, preventing a held no-op
+LT from drawing a bow after magic is sheathed.
+
+Touch A also cancels its old action when a weapon is drawn or sheathed, without
+reinterpreting the held finger. UI, inventory and quick-ring A bindings are unchanged.
 
 LB walk is not the existing toggle action. `PlayerControl::setGamepadWalk(bool)` adds
 `WM_Walk` only for the duration of the hold, remembers whether the mode already

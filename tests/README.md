@@ -37,3 +37,44 @@ or equipped underneath the editor.
 Screenshots use `XCUIScreen.main` because the application accessibility frame can
 be stale after the game forces its landscape orientation. `testCameraHoldAndRelease`
 also captures the world 12 seconds after releasing a sustained right-stick input.
+
+`testContextualAttackA` checks inventory A, draws the equipped weapon, taps A three
+times and RT once, sheathes, then returns through the menu. Review its screenshots
+for the attack poses; foreground assertions alone only prove the game stayed alive.
+
+## Contextual A/RT input probe
+
+`ios/controllerattack.cpp` tests the real `GamepadInput`, `TouchInput` and
+`PlayerControl` callbacks in a paused Simulator game with no connected controller.
+It covers shared A/RT ownership, both release orders, short A taps (including after
+RT release), aim restoration, weapon-mode changes and input resets. The six weapon
+fixtures change only in-memory mode and restore it before resuming: they test
+input routing, not ammunition, damage or spell execution. No save is written.
+
+Build it as an arm64 Simulator bundle against the candidate app, using the app's
+matching compiler response file (include paths and defines):
+
+```sh
+xcrun clang++ -target arm64-apple-ios15.0-simulator \
+  -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+  @/path/to/matching/common-args.resp -fno-access-control -bundle \
+  -bundle_loader /path/to/Gothic2Notr.app/Gothic2Notr \
+  tests/ios/controllerattack.cpp -o /path/to/builds/controllerattack.bundle
+```
+
+Launch the isolated QA app with `-nomenu -save 1`. After the world loads, attach
+LLDB, break in `GamepadInput::tick`, capture `this`, and disable the breakpoint.
+Load the bundle from a Simulator-readable path such as a dedicated `/tmp` folder:
+
+```text
+expression -- GamepadInput *$pad = this
+expression -- void *$probe = (void*)dlopen("/path/to/controllerattack.bundle",2)
+expression -- $probe
+```
+
+Only if the handle is non-null, call
+`(int)((int(*)(void*))dlsym($probe,"testControllerAttack"))($pad)`.
+The return value must be zero and the app console must print the final PASS count;
+a nonzero return identifies the failed check. Flush stdout, detach, then terminate
+the QA app. Never ship or load this probe on a phone. It supplements rather than
+replaces gesture tests or validation with a real physical controller.

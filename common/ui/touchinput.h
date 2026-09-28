@@ -62,6 +62,7 @@ class TouchInput : public Tempest::Widget {
 #endif
 
     void aimRing(const Tempest::Point& pos);
+    bool hasHeldAction(KeyCodec::Action action) const;
     void releaseWorldTouches();
     void loadConfig();
     void updatePadAxes();

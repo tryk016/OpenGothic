@@ -39,6 +39,41 @@ final class VectorControlsUITests: XCTestCase {
   func testSlot1() { exercise(slot: 1) }
   func testSlot4() { exercise(slot: 4) }
 
+  func testContextualAttackA() {
+    let app = XCUIApplication(bundleIdentifier: bundleID)
+    app.launchArguments = ["-nomenu", "-save", "1"]
+    addTeardownBlock { app.terminate() }
+    app.launch()
+    XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30))
+    wait(35)
+
+    point(app,0.472,0.07).tap() // View: inventory.
+    point(app,0.845,0.879).tap() // A toggles equipment, not attack.
+    point(app,0.845,0.879).tap() // Restore the save's equipped weapon.
+    screenshot("attack-00-inventory-A",app)
+    point(app,0.902,0.90).tap()
+    point(app,0.856,0.365).tap() // Y: draw.
+    wait(3)
+    screenshot("attack-01-armed",app)
+    for hit in 1...3 {
+      point(app,0.856,0.575).tap() // A: same attack as RT.
+      screenshot("attack-02-A-\(hit)",app)
+      wait(1)
+    }
+    point(app,0.903,0.07).tap() // RT remains an alternative.
+    screenshot("attack-03-RT",app)
+    wait(2)
+    point(app,0.856,0.365).tap()
+    wait(3)
+    point(app,0.856,0.575).tap()
+    screenshot("attack-04-unarmed-A",app)
+    point(app,0.528,0.07).tap() // Menu: no carried combat input.
+    screenshot("attack-05-menu",app)
+    point(app,0.902,0.90).tap()
+    wait(2)
+    screenshot("attack-06-back-to-world",app)
+  }
+
   func testTouchItemAssignment() {
     let app = XCUIApplication(bundleIdentifier: bundleID)
     app.launchArguments = ["-nomenu", "-save", "1"]

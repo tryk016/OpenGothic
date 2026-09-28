@@ -271,7 +271,13 @@ void GamepadInput::setWorldHeld(A a, bool held) {
 
 void GamepadInput::setWorldButton(GamepadButton button, bool physicalHeld,
                                   A action,
-                                  const std::vector<GamepadButtonEvent>& events) {
+                                  const std::vector<GamepadButtonEvent>& events,
+                                  bool alternateHeld) {
+  if(alternateHeld) {
+    worldPulseRelease[size_t(action)] = false;
+    setWorldHeld(action,true);
+    return;
+    }
   // A complete press+release can occur between two game ticks. Keep such a
   // tap logically pressed for one simulation tick so Gothic can observe it.
   if(worldPulseRelease[size_t(action)]) {
@@ -392,6 +398,7 @@ void GamepadInput::tickWorldSystemButtons(
   }
 
 void GamepadInput::suppressCarriedWorldInput() {
+  aLatchedSemantic          = A::Idle;
   suppressLeftUntilNeutral = true;
   suppressLookUntilNeutral = true;
   leftStickActive          = false;
@@ -639,6 +646,7 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
   const bool ranged = ws==WeaponState::Bow || ws==WeaponState::CBow;
   const bool armed  = ws!=WeaponState::NoWeapon;
 
+  const A aSemantic  = armed ? A::PadAttack : A::ActionGeneric;
   const A ltSemantic = !armed ? A::WeaponBow :
                        melee  ? A::Parade    :
                        ranged ? A::PadAim    : A::Idle;
@@ -659,6 +667,14 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
   // A held contextual button keeps the meaning it had at press time. If a
   // draw/sheathe animation changes WeaponState underneath it, release the old
   // meaning and require a real button release before the new one can arm.
+  if(!s.a || aReleased)
+    aLatchedSemantic = A::Idle;
+  if(!suppressAUntilRelease && s.a) {
+    if(aLatchedSemantic!=A::Idle && aLatchedSemantic!=aSemantic)
+      suppressAUntilRelease = true;
+    else
+      aLatchedSemantic = aSemantic;
+    }
   const bool ltHeld = s.lt>trigThresh;
   if(!ltHeld) {
     ltSemanticLatched = false;
@@ -673,7 +689,7 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
     releaseSemantic({A::WeaponBow,A::Parade,A::PadAim});
     suppressLtUntilRelease = true;
     }
-  if(!suppressRtUntilRelease && s.rt>trigThresh &&
+  if(!suppressRtUntilRelease && s.rt>trigThresh && prev.rt>trigThresh &&
      semanticChanged(rtSemantic,{A::WeaponMele,A::PadAttack})) {
     releaseSemantic({A::WeaponMele,A::PadAttack});
     suppressRtUntilRelease = true;
@@ -736,16 +752,18 @@ void GamepadInput::tickWorld(uint64_t dt, const GamepadState& s,
       }
     }
 
-  if(!suppressRtUntilRelease) {
-    if(!armed) {
-      setWorldHeld(A::PadAttack,false);
-      setWorldButton(GamepadButton::RT,s.rt>trigThresh,A::WeaponMele,events);
-      }
-    else {
-      setWorldHeld(A::WeaponMele,false);
-      setWorldButton(GamepadButton::RT,s.rt>trigThresh,A::PadAttack,events);
-      }
-    }
+  if(!suppressRtUntilRelease && !armed)
+    setWorldButton(GamepadButton::RT,s.rt>trigThresh,A::WeaponMele,events);
+  else
+    setWorldHeld(A::WeaponMele,false);
+
+  const bool rtAttack = !suppressRtUntilRelease && armed && s.rt>trigThresh;
+  if(!rtAttack && prev.rt>trigThresh && !prev.a)
+    setWorldHeld(A::PadAttack,false);
+  if(!suppressAUntilRelease && armed)
+    setWorldButton(GamepadButton::A,s.a,A::PadAttack,events,rtAttack);
+  else
+    setWorldHeld(A::PadAttack,rtAttack);
 
   if(!suppressLbUntilRelease && melee) {
     if(gamepadWalkHeld) {
