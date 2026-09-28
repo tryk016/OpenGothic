@@ -326,4 +326,8 @@ target_include_directories(Spacer PRIVATE "spacer")
 target_link_libraries(Spacer PRIVATE OpenGothic SpacerAssets)
 
 # installation
+if(IOS)
 install(TARGETS Gothic2Notr DESTINATION bin)
+else()
+install(TARGETS Gothic2Notr Spacer DESTINATION bin)
+endif()
