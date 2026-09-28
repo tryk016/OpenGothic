@@ -1972,14 +1972,12 @@ void MainWindow::render(){
 
     auto t = Application::tickCount();
 #else
-    uint64_t targetPeriodMs = 0;
-    if(!Gothic::inst().isInGame() && !video.isActive())
-      targetPeriodMs = 16u;
-    targetPeriodMs = std::max(targetPeriodMs,maxFpsInv);
-
     auto t = Application::tickCount();
-    if(targetPeriodMs>0 && t-time<targetPeriodMs) {
-      const uint32_t delay = uint32_t(targetPeriodMs-(t-time));
+    auto frameTime = maxFpsInv;
+    if(!Gothic::inst().isInGame() && !video.isActive())
+      frameTime = std::max<uint64_t>(frameTime,16);
+    if(t-time<frameTime) {
+      uint32_t delay = uint32_t(frameTime-(t-time));
       Application::sleep(delay);
       t += delay;
       }
