@@ -15,13 +15,6 @@
 std::u16string InstallDetect::applicationSupportDirectory() {
   std::string ret;
 
-  // NOTE (MRC): both `paths` (from NSSearchPathForDirectoriesInDomains) and
-  // `app` (from stringByAppendingPathComponent:) are AUTORELEASED — we do not
-  // own them, so we must NOT release them. The previous code sent them an extra
-  // -release, which over-released the objects; the eventual autorelease-pool
-  // drain (inside iOSApi::implProcessEvents) then messaged freed memory and
-  // aborted with SIGABRT. Wrap in a pool so the temporaries are reclaimed
-  // promptly without any manual release.
   @autoreleasepool {
 #if defined(__OSX__)
     NSArray* paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
