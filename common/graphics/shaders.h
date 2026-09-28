@@ -172,7 +172,7 @@ class Shaders {
       };
 
     void                     compileKeyShaders();
-    void                     compileShaders();
+    void                     compileShaders() noexcept;
     void                     completeCompiler();
 
     Tempest::RenderPipeline  postEffect(std::string_view name);
