@@ -39,6 +39,42 @@ final class VectorControlsUITests: XCTestCase {
   func testSlot1() { exercise(slot: 1) }
   func testSlot4() { exercise(slot: 4) }
 
+  func testOrientationAndResume() {
+    let app = XCUIApplication(bundleIdentifier: bundleID)
+    app.launchArguments = ["-nomenu", "-save", "1"]
+    addTeardownBlock { app.terminate() }
+    app.launch()
+    XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30))
+    wait(35)
+
+    for (orientation, name) in [
+      (UIDeviceOrientation.landscapeLeft, "left"),
+      (.portrait, "portrait-device"),
+      (.landscapeRight, "right")
+    ] {
+      XCUIDevice.shared.orientation = orientation
+      wait(2)
+      screenshot("orientation-\(name)", app)
+    }
+
+    let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+    settings.activate()
+    XCTAssertTrue(settings.wait(for: .runningForeground, timeout: 15))
+    XCUIDevice.shared.orientation = .portrait
+    wait(2)
+    app.activate()
+    XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
+    wait(2)
+    screenshot("orientation-resumed-portrait-device", app)
+    XCUIDevice.shared.orientation = .landscapeRight
+    wait(2)
+    point(app,0.528,0.07).tap()
+    screenshot("orientation-menu", app)
+    point(app,0.902,0.90).tap()
+    wait(2)
+    screenshot("orientation-back-to-world", app)
+  }
+
   func testContextualAttackA() {
     let app = XCUIApplication(bundleIdentifier: bundleID)
     app.launchArguments = ["-nomenu", "-save", "1"]

@@ -42,6 +42,11 @@ also captures the world 12 seconds after releasing a sustained right-stick input
 times and RT once, sheathes, then returns through the menu. Review its screenshots
 for the attack poses; foreground assertions alone only prove the game stayed alive.
 
+`testOrientationAndResume` rotates the device through both landscape orientations
+and portrait, then resumes the game from Settings and opens/closes the menu.
+Review its screenshots for landscape presentation, safe-area placement and working
+touch controls. Device orientation alone is not an assertion of UI orientation.
+
 ## Contextual A/RT input probe
 
 `ios/controllerattack.cpp` tests the real `GamepadInput`, `TouchInput` and
