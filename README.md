@@ -137,6 +137,7 @@ are in [docs/ios/INSTALL.md](docs/ios/INSTALL.md).
 - [Installation and game-data setup](docs/ios/INSTALL.md)
 - [Controller implementation and validation](docs/ios/CONTROLLER.md)
 - [Startup Metal shader design](docs/ios/SHADER-STARTUP.md)
+- [Android build and game-data setup](android/README.md)
 - [License](LICENSE)
 
 Controller glyphs are

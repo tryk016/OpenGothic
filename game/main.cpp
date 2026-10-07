@@ -14,8 +14,9 @@
 #include <Tempest/MetalApi>
 #endif
 
-#if defined(__IOS__)
+#if defined(__IOS__) || defined(__ANDROID__)
 #include "utils/installdetect.h"
+#include <filesystem>
 #if defined(OPENGOTHIC_IOS_PRECOMPILED_STARTUP_SHADERS_AVAILABLE)
 #include "iosstartupshaders.h"
 #endif
@@ -90,7 +91,12 @@ std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const CommandLine& g) {
   }
 
 int main(int argc,const char** argv) {
-#if defined(__IOS__)
+#if defined(__ANDROID__)
+  {
+    auto appdir = InstallDetect::androidInternalDataPath();
+    std::filesystem::current_path(appdir);
+  }
+#elif defined(__IOS__)
   {
     auto appdir = InstallDetect::applicationSupportDirectory();
     std::filesystem::current_path(appdir);
