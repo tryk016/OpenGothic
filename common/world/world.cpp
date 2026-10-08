@@ -127,6 +127,7 @@ World::World(GameSession& game, std::string_view file, bool startup, std::functi
 #else
     wdynamic = wdynamicFut.get();
 #endif
+    world.world_mesh = zenkit::Mesh();
     loadProgress(70);
 
     globFx.reset(new GlobalEffects(*this));
