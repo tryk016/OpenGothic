@@ -1647,9 +1647,11 @@ void MainWindow::startPendingSave(Pixmap&& preview) {
     [path=std::move(path),name=std::move(name),screen=std::move(screen)](std::unique_ptr<GameSession>&& game){
       if(!game)
         return std::move(game);
+      {
       Tempest::WFile f(path);
       Serialize      s(f);
       game->save(s,name,*screen);
+      }
       return std::move(game);
       });
   update();
